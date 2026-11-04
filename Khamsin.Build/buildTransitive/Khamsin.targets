@@ -1,5 +1,8 @@
 <Project>
   <PropertyGroup>
+    <!-- The task ships for the .NET (Core) MSBuild used by dotnet build. Consumers that
+         import the package do not need to set KhamsinTaskAssembly themselves. -->
+    <KhamsinTaskAssembly Condition="'$(KhamsinTaskAssembly)' == ''">$(MSBuildThisFileDirectory)..\tasks\net8.0\Khamsin.Build.dll</KhamsinTaskAssembly>
   </PropertyGroup>
 
   <UsingTask TaskName="Khamsin.Build.KhamsinEmitCss" AssemblyFile="$(KhamsinTaskAssembly)" />

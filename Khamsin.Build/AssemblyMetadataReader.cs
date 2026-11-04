@@ -14,6 +14,7 @@ namespace Khamsin.Build;
 internal static class AssemblyMetadataReader
 {
     private const string ManifestAttributeName = "Khamsin.KhamsinManifestAttribute";
+    private const string ConfigAttributeName = "Khamsin.KhamsinConfigAttribute";
     private const string RenderTreeBuilderName = "Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder";
 
     private static readonly Lazy<Dictionary<ushort, OpCodeInfo>> OpCodeTable = new(BuildOpCodeTable);
@@ -24,12 +25,10 @@ internal static class AssemblyMetadataReader
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         using var peReader = new PEReader(stream);
         if (!peReader.HasMetadata)
-        {
             return result;
-        }
 
         var reader = peReader.GetMetadataReader();
-        ReadAssemblyManifests(reader, result);
+        ReadAssemblyAttributes(reader, result);
 
         foreach (var typeHandle in reader.TypeDefinitions)
         {
@@ -61,10 +60,67 @@ internal static class AssemblyMetadataReader
         return result;
     }
 
-    private static void ReadAssemblyManifests(MetadataReader reader, AssemblyScanResult result)
-        => result.AssemblyManifests.AddRange(
-            reader.GetAssemblyDefinition().GetCustomAttributes().Select(attributeHandle =>
-                ReadManifest(reader, attributeHandle)).OfType<ManifestInfo>());
+    private static void ReadAssemblyAttributes(MetadataReader reader, AssemblyScanResult result)
+    {
+        var assembly = reader.GetAssemblyDefinition();
+        var assemblyName = reader.GetString(assembly.Name);
+        foreach (var handle in assembly.GetCustomAttributes())
+        {
+            var manifest = ReadManifest(reader, handle);
+            if (manifest is not null)
+            {
+                result.AssemblyManifests.Add(manifest);
+                continue;
+            }
+
+            var json = ReadConfigJson(reader, handle);
+            if (json is not null)
+                result.Configs.Add(new ConfigInfo(assemblyName, json));
+        }
+    }
+
+    /// <summary>Reads the <c>Json</c> named argument from a <c>KhamsinConfigAttribute</c> blob.</summary>
+    private static string? ReadConfigJson(MetadataReader reader, CustomAttributeHandle handle)
+    {
+        var attribute = reader.GetCustomAttribute(handle);
+        var attributeType = TypeNames.FromAttributeType(reader, attribute);
+        if (!string.Equals(attributeType, ConfigAttributeName, StringComparison.Ordinal))
+            return null;
+
+        var blob = reader.GetBlobReader(attribute.Value);
+        if (blob.Length < 4)
+            return null;
+
+        if (blob.ReadUInt16() != 0x0001)
+            return null;
+
+        var namedCount = blob.ReadUInt16();
+        for (var i = 0; i < namedCount; i++)
+        {
+            if (blob.RemainingBytes < 2)
+                break;
+
+            blob.ReadByte();
+            var elementType = blob.ReadByte();
+            var isArray = false;
+            if (elementType == 0x1D)
+            {
+                isArray = true;
+                elementType = blob.ReadByte();
+            }
+
+            var name = blob.ReadSerializedString();
+            if (name is null)
+                break;
+
+            if (!isArray && elementType == 0x0E && string.Equals(name, "Json", StringComparison.Ordinal))
+                return blob.ReadSerializedString() ?? string.Empty;
+
+            SkipValue(blob, elementType, isArray);
+        }
+
+        return null;
+    }
 
     private static ManifestInfo? ReadManifest(MetadataReader reader, CustomAttributeHandle handle)
     {
@@ -176,9 +232,7 @@ internal static class AssemblyMetadataReader
             if (info is { OperandType: OperandType.InlineMethod, Name: "call" or "callvirt" or "newobj" })
             {
                 if (offset + 4 > il.Length)
-                {
                     return;
-                }
 
                 var token = ReadInt32(il, offset);
                 HandleMethodToken(reader, token, used);
@@ -187,9 +241,7 @@ internal static class AssemblyMetadataReader
             if (info.OperandType == OperandType.InlineSwitch)
             {
                 if (offset + 4 > il.Length)
-                {
                     return;
-                }
 
                 var count = (uint)ReadInt32(il, offset);
                 offset += 4;
@@ -199,9 +251,7 @@ internal static class AssemblyMetadataReader
 
             offset += OperandSize(info.OperandType);
             if (offset > il.Length)
-            {
                 return;
-            }
         }
     }
 
@@ -341,15 +391,14 @@ internal static class TypeNames
     internal static string FromAttributeType(MetadataReader reader, CustomAttribute attribute)
     {
         var constructor = attribute.Constructor;
-        switch (constructor.Kind)
+        return constructor.Kind switch
         {
-            case HandleKind.MemberReference:
-                return FromEntity(reader, reader.GetMemberReference((MemberReferenceHandle)constructor).Parent);
-            case HandleKind.MethodDefinition:
-                return FromDefinition(reader, reader.GetMethodDefinition((MethodDefinitionHandle)constructor).GetDeclaringType());
-            default:
-                return string.Empty;
-        }
+            HandleKind.MemberReference => FromEntity(reader,
+                reader.GetMemberReference((MemberReferenceHandle)constructor).Parent),
+            HandleKind.MethodDefinition => FromDefinition(reader,
+                reader.GetMethodDefinition((MethodDefinitionHandle)constructor).GetDeclaringType()),
+            _ => string.Empty
+        };
     }
 
     internal static string GetMethodName(MetadataReader reader, EntityHandle handle)
@@ -363,16 +412,13 @@ internal static class TypeNames
         return string.Empty;
     }
 
-    internal static string GetMethodParentTypeName(MetadataReader reader, EntityHandle handle)
-    {
-        if (handle.Kind is HandleKind.MemberReference)
-            return FromEntity(reader, reader.GetMemberReference((MemberReferenceHandle)handle).Parent);
-
-        if (handle.Kind is HandleKind.MethodDefinition)
-            return FromDefinition(reader, reader.GetMethodDefinition((MethodDefinitionHandle)handle).GetDeclaringType());
-
-        return string.Empty;
-    }
+    internal static string GetMethodParentTypeName(MetadataReader reader, EntityHandle handle) =>
+        handle.Kind switch
+        {
+            HandleKind.MemberReference => FromEntity(reader, reader.GetMemberReference((MemberReferenceHandle)handle).Parent),
+            HandleKind.MethodDefinition => FromDefinition(reader, reader.GetMethodDefinition((MethodDefinitionHandle)handle).GetDeclaringType()),
+            _ => string.Empty
+        };
 
     internal static string? CleanAttributeTypeName(string? value)
     {

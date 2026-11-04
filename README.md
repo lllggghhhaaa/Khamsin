@@ -36,7 +36,7 @@ both are statically reachable.
 ## Install
 
 ```xml
-<PackageReference Include="Khamsin" Version="0.1.0" />
+<PackageReference Include="Khamsin" Version="0.2.0" />
 ```
 
 The package carries the runtime (`lib/net8.0`), the analyzer and manifest generator

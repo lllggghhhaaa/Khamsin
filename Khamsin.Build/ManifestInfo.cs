@@ -1,30 +1,17 @@
 namespace Khamsin.Build;
 
-internal sealed class ManifestInfo
-{
-    public ManifestInfo(string classes, List<string> uses)
-    {
-        Classes = classes;
-        Uses = uses;
-    }
+internal sealed record ManifestInfo(string Classes, List<string> Uses);
 
-    public string Classes { get; }
-
-    public List<string> Uses { get; }
-}
+/// <summary>A configuration document embedded in an assembly by the source generator.</summary>
+internal sealed record ConfigInfo(string AssemblyName, string Json);
 
 internal sealed class AssemblyScanResult
 {
-    public AssemblyScanResult()
-    {
-        Manifests = new Dictionary<string, ManifestInfo>(StringComparer.Ordinal);
-        AssemblyManifests = new List<ManifestInfo>();
-        UsedComponents = new HashSet<string>(StringComparer.Ordinal);
-    }
+    public Dictionary<string, ManifestInfo> Manifests { get; } = new(StringComparer.Ordinal);
 
-    public Dictionary<string, ManifestInfo> Manifests { get; }
+    public List<ManifestInfo> AssemblyManifests { get; } = [];
 
-    public List<ManifestInfo> AssemblyManifests { get; }
+    public List<ConfigInfo> Configs { get; } = [];
 
-    public HashSet<string> UsedComponents { get; }
+    public HashSet<string> UsedComponents { get; } = new(StringComparer.Ordinal);
 }

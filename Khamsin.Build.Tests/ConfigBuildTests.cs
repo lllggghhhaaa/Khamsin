@@ -77,4 +77,38 @@ public class ConfigBuildTests
         Assert.NotEqual(0, result.ExitCode);
         Assert.Contains("KHM", result.AllOutput);
     }
+
+    [Fact]
+    public void Library_config_reaches_the_app_stylesheet()
+    {
+        using var fixture = new BuildFixture(homeMarkup: """
+            @page "/"
+
+            <Card Khamsin="@("bg-brand")">Body</Card>
+            """);
+        fixture.SetLibraryConfig("""{ "colors": { "brand": "#123456" } }""");
+
+        var result = fixture.Build();
+        Assert.True(result.ExitCode == 0, result.AllOutput);
+        Assert.DoesNotContain("KHM002", result.AllOutput);
+        Assert.Contains("--color-brand:#123456", fixture.Css);
+        Assert.Contains(".bg-brand{background-color:var(--color-brand)}", fixture.Css);
+    }
+
+    [Fact]
+    public void App_config_overrides_library_config()
+    {
+        using var fixture = new BuildFixture(homeMarkup: """
+            @page "/"
+
+            <Card Khamsin="@("bg-brand")">Body</Card>
+            """);
+        fixture.SetLibraryConfig("""{ "colors": { "brand": "#123456" } }""");
+        fixture.SetConfig("""{ "colors": { "brand": "#654321" } }""");
+
+        var result = fixture.Build();
+        Assert.True(result.ExitCode == 0, result.AllOutput);
+        Assert.Contains("--color-brand:#654321", fixture.Css);
+        Assert.DoesNotContain("--color-brand:#123456", fixture.Css);
+    }
 }

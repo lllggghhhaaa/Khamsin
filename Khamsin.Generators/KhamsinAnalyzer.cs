@@ -23,40 +23,63 @@ public sealed class KhamsinAnalyzer : DiagnosticAnalyzer
         context.EnableConcurrentExecution();
         context.RegisterCompilationStartAction(startContext =>
         {
-            var engine = CreateEngine(startContext.Options);
+            var engine = CreateEngine(startContext.Options, startContext.Compilation);
             startContext.RegisterSyntaxNodeAction(nodeContext => AnalyzeInvocation(nodeContext, engine), SyntaxKind.InvocationExpression);
             startContext.RegisterSyntaxNodeAction(nodeContext => AnalyzeClassLiteral(nodeContext, engine), SyntaxKind.VariableDeclarator, SyntaxKind.PropertyDeclaration);
         });
     }
 
     /// <summary>
-    /// Builds the validation engine from the configuration file when one is present. Parse errors
-    /// are not reported here; the generator owns the KHM005 diagnostic, and validation falls back
-    /// to the default theme so the same mistake is not reported twice.
+    /// Builds the validation engine from referenced assemblies' configurations and the current
+    /// project's configuration file. Parse errors are not reported here; the generator owns the
+    /// KHM005/KHM006 diagnostics, and validation falls back to the remaining configurations so the
+    /// same mistake is not reported twice.
     /// </summary>
-    private static KhamsinEngine CreateEngine(AnalyzerOptions options)
+    private static KhamsinEngine CreateEngine(AnalyzerOptions options, Compilation compilation)
+    {
+        var configurations = new List<Khamsin.KhamsinConfig>();
+
+        foreach (var referenced in ConfigDiscovery.Read(compilation))
+            if (referenced.Config is not null)
+                configurations.Add(referenced.Config);
+
+        var own = ReadOwnConfig(options);
+        if (own is not null)
+            configurations.Add(own);
+
+        return configurations.Count == 0
+            ? KhamsinEngine.Default
+            : new KhamsinEngine(Khamsin.KhamsinConfig.Merge(configurations).ToTheme());
+    }
+
+    private static Khamsin.KhamsinConfig? ReadOwnConfig(AnalyzerOptions options)
     {
         var provider = options.AnalyzerConfigOptionsProvider;
         if (provider?.GlobalOptions.TryGetValue("build_property.KhamsinConfig", out var configuredName) != true)
-            return KhamsinEngine.Default;
+            return null;
 
         var name = configuredName ?? string.Empty;
         if (name.Length == 0)
-            return KhamsinEngine.Default;
+            return null;
 
+        AdditionalText? match = null;
         foreach (var file in options.AdditionalFiles)
         {
             if (!IsConfigFilePath(file.Path, name))
                 continue;
 
-            var text = file.GetText()?.ToString();
-            if (text is not null && Khamsin.KhamsinConfig.TryParse(text, out var config, out _) && config is not null)
-                return new KhamsinEngine(config.ToTheme());
-
-            return KhamsinEngine.Default;
+            if (match is null || string.CompareOrdinal(file.Path, match.Path) < 0)
+                match = file;
         }
 
-        return KhamsinEngine.Default;
+        if (match is null)
+            return null;
+
+        var text = match.GetText()?.ToString();
+        if (text is null)
+            return null;
+
+        return Khamsin.KhamsinConfig.TryParse(text, out var config, out _) ? config : null;
     }
 
     private static bool IsConfigFilePath(string path, string configuredName)

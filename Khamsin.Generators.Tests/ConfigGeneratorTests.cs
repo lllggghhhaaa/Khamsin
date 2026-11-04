@@ -90,6 +90,73 @@ public class ConfigGeneratorTests
         Assert.Contains(".theme-dark", Generated(result, "Khamsin.ThemeRegistration.g.cs"));
     }
 
+    [Fact]
+    public void Own_config_is_embedded_for_consumers()
+    {
+        var (result, output, diagnostics) = GeneratorHarness.Run(
+            [(RazorPath, """<p class="text-lg">Home</p>""")],
+            configJson: Config);
+
+        Assert.DoesNotContain(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        var code = Generated(result, "Khamsin.Config.g.cs");
+        Assert.Contains("KhamsinConfigAttribute", code);
+        Assert.Contains("theme-dark", code);
+        var errors = output.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        Assert.True(errors.Count == 0, string.Join(Environment.NewLine, errors.Select(e => e.ToString())));
+    }
+
+    [Fact]
+    public void Referenced_library_config_joins_the_closed_set()
+    {
+        var library = GeneratorHarness.CreateAssemblyWithConfig(
+            "SampleLib",
+            """{ "colors": { "brand": "#123456" }, "fonts": { "display": "Georgia, serif" } }""");
+
+        var (result, output, diagnostics) = GeneratorHarness.Run(
+            [(RazorPath, """<p Khamsin="bg-brand font-display">Home</p>""")],
+            extraReferences: [library]);
+
+        Assert.DoesNotContain(diagnostics, d => d.Id is "KHM002" or "KHM006");
+        Assert.Contains("bg-brand", Generated(result, "Home.Khamsin.g.cs"));
+        var registration = Generated(result, "Khamsin.ThemeRegistration.g.cs");
+        Assert.Contains("\"brand\"", registration);
+        Assert.Contains("\"#123456\"", registration);
+        var errors = output.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        Assert.True(errors.Count == 0, string.Join(Environment.NewLine, errors.Select(e => e.ToString())));
+    }
+
+    [Fact]
+    public void App_config_overrides_referenced_library_config()
+    {
+        var library = GeneratorHarness.CreateAssemblyWithConfig(
+            "SampleLib",
+            """{ "colors": { "primary": "#111111" } }""");
+
+        var (result, _, diagnostics) = GeneratorHarness.Run(
+            [(RazorPath, """<p class="text-lg">Home</p>""")],
+            configJson: """{ "colors": { "primary": "#222222" } }""",
+            extraReferences: [library]);
+
+        Assert.DoesNotContain(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        var registration = Generated(result, "Khamsin.ThemeRegistration.g.cs");
+        Assert.Contains("\"#222222\"", registration);
+        Assert.DoesNotContain("\"#111111\"", registration);
+    }
+
+    [Fact]
+    public void Invalid_referenced_config_reports_KHM006()
+    {
+        var library = GeneratorHarness.CreateAssemblyWithConfig(
+            "BrokenLib",
+            """{ "colors": { "brand": } }""");
+
+        var (_, _, diagnostics) = GeneratorHarness.Run(
+            [(RazorPath, """<p class="text-lg">Home</p>""")],
+            extraReferences: [library]);
+
+        Assert.Contains(diagnostics, d => d.Id == "KHM006" && d.Severity == DiagnosticSeverity.Warning);
+    }
+
     private const string RazorPath = @"C:\proj\Components\Home.razor";
 
     private static string Generated(GeneratorDriverRunResult result, string hintName)

@@ -54,32 +54,54 @@ public sealed class KhamsinEmitCss : Task
         return !Log.HasLoggedErrors;
     }
 
-    /// <summary>The engine used for parsing and emission; the config extends the default theme when present.</summary>
-    private KhamsinEngine? _engine;
-
-    private KhamsinEngine Engine
+    /// <summary>
+    /// Builds the engine from the app's configuration layered over the configurations embedded in
+    /// referenced assemblies. Referenced configurations merge in assembly-name order; the app's
+    /// configuration is applied last so it always wins.
+    /// </summary>
+    private KhamsinEngine CreateEngine(AssemblyScanResult consumer, IEnumerable<ConfigInfo> referenced)
     {
-        get
+        var configurations = new List<KhamsinConfig>();
+        foreach (var info in referenced.OrderBy(static info => info.AssemblyName, StringComparer.Ordinal))
+            AddConfig(configurations, info);
+
+        if (ConfigPath.Length > 0 && File.Exists(ConfigPath))
         {
-            if (_engine is not null) return _engine;
-
-            if (ConfigPath.Length > 0 && File.Exists(ConfigPath))
+            if (!KhamsinConfig.TryLoad(ConfigPath, out var config, out var errors) || config is null)
             {
-                if (!Khamsin.KhamsinConfig.TryLoad(ConfigPath, out var config, out var errors) || config is null)
-                {
-                    foreach (var error in errors)
-                        Log.LogError("Khamsin config ({0}): {1}", ConfigPath, error);
+                foreach (var error in errors)
+                    Log.LogError("Khamsin config ({0}): {1}", ConfigPath, error);
 
-                    throw new InvalidOperationException("Khamsin: the configuration file is invalid; see the errors above.");
-                }
-
-                _engine = new KhamsinEngine(config.ToTheme());
-                return _engine;
+                throw new InvalidOperationException("Khamsin: the configuration file is invalid; see the errors above.");
             }
 
-            _engine = KhamsinEngine.Default;
-            return _engine;
+            configurations.Add(config);
         }
+        else
+        {
+            // Fall back to the configuration the generator embedded in the consumer itself, for
+            // builds where the task did not receive a config path.
+            foreach (var info in consumer.Configs.OrderBy(static info => info.AssemblyName, StringComparer.Ordinal))
+                AddConfig(configurations, info);
+        }
+
+        return configurations.Count == 0
+            ? KhamsinEngine.Default
+            : new KhamsinEngine(KhamsinConfig.Merge(configurations).ToTheme());
+    }
+
+    private void AddConfig(List<KhamsinConfig> configurations, ConfigInfo info)
+    {
+        if (KhamsinConfig.TryParse(info.Json, out var config, out var errors) && config is not null)
+        {
+            configurations.Add(config);
+            return;
+        }
+
+        Log.LogWarning(null, "KHM006", null, null, 0, 0, 0, 0,
+            "Khamsin: configuration embedded in referenced assembly '{0}' is invalid and was ignored: {1}",
+            info.AssemblyName,
+            string.Join(" ", errors));
     }
 
     private void ExecuteCore()
@@ -97,6 +119,7 @@ public sealed class KhamsinEmitCss : Task
         var assemblyManifests = new Dictionary<string, List<ManifestInfo>>(StringComparer.OrdinalIgnoreCase);
         var contributingAssemblies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var manifestOwners = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var referencedConfigs = new Dictionary<string, ConfigInfo>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var reference in ReferenceAssemblies)
         {
@@ -121,7 +144,12 @@ public sealed class KhamsinEmitCss : Task
             }
 
             if (scan.AssemblyManifests.Count > 0) assemblyManifests[path] = scan.AssemblyManifests;
+
+            foreach (var config in scan.Configs)
+                referencedConfigs[config.AssemblyName] = config;
         }
+
+        var engine = CreateEngine(consumer, referencedConfigs.Values);
 
         foreach (var manifest in consumer.Manifests) manifests[manifest.Key] = manifest.Value;
 
@@ -173,7 +201,7 @@ public sealed class KhamsinEmitCss : Task
                 foreach (var literal in scan.Literals) AddClasses(classes, literal.Value);
 
                 foreach (var literal in scan.AuthorLiterals)
-                    if (Engine.TryParse(literal.Value, out _, out _)) AddClasses(classes, literal.Value);
+                    if (engine.TryParse(literal.Value, out _, out _)) AddClasses(classes, literal.Value);
             }
             else if (string.Equals(extension, ".cs", StringComparison.OrdinalIgnoreCase))
             {
@@ -182,7 +210,7 @@ public sealed class KhamsinEmitCss : Task
             }
         }
 
-        var result = Engine.Generate(classes, Minify);
+        var result = engine.Generate(classes, Minify);
         foreach (var unknown in result.UnknownClasses) 
             Log.LogWarning(null, "KHM002", null, null, 0, 0, 0, 0, "Khamsin: '{0}' is not a known utility class and was not emitted.", unknown);
 
@@ -228,12 +256,7 @@ public sealed class KhamsinEmitCss : Task
     private static void AddClasses(List<string> classes, string classList)
     {
         foreach (var token in KhamsinEngine.Tokenize(classList))
-        {
-            if (!classes.Contains(token))
-            {
-                classes.Add(token);
-            }
-        }
+            if (!classes.Contains(token)) classes.Add(token);
     }
 
     private static bool PathsEqual(string left, string right)
@@ -242,22 +265,8 @@ public sealed class KhamsinEmitCss : Task
     private static bool IsIntermediate(string path)
     {
         var normalized = path.Replace('\\', '/');
-        return normalized.IndexOf("/obj/", StringComparison.OrdinalIgnoreCase) >= 0;
+        return normalized.Contains("/obj/", StringComparison.OrdinalIgnoreCase);
     }
 
-    private sealed class CachedScan
-    {
-        public CachedScan(long stamp, long length, AssemblyScanResult scan)
-        {
-            Stamp = stamp;
-            Length = length;
-            Scan = scan;
-        }
-
-        public long Stamp { get; }
-
-        public long Length { get; }
-
-        public AssemblyScanResult Scan { get; }
-    }
+    private sealed record CachedScan(long Stamp, long Length, AssemblyScanResult Scan);
 }

@@ -107,10 +107,11 @@ namespace Sample.Components
         string rootNamespace = "Sample",
         string projectDirectory = @"C:\proj\",
         string? configJson = null,
-        string configName = "khamsin.json")
+        string configName = "khamsin.json",
+        IEnumerable<MetadataReference>? extraReferences = null)
     {
         var parseOptions = ParseOptions();
-        var compilation = CreateCompilation(extraCSharp, parseOptions);
+        var compilation = CreateCompilation(extraCSharp, parseOptions, extraReferences);
 
         var additionalTexts = razorFiles
             .Select(file => (AdditionalText)new InMemoryAdditionalText(file.Path, file.Text))
@@ -161,14 +162,44 @@ namespace Sample.Components
         return usings.Append(Stubs).Append('\n').Append(extra.Substring(index)).ToString();
     }
 
-    internal static CSharpCompilation CreateCompilation(string? extraCSharp = null, CSharpParseOptions? parseOptions = null)
+    internal static CSharpCompilation CreateCompilation(
+        string? extraCSharp = null,
+        CSharpParseOptions? parseOptions = null,
+        IEnumerable<MetadataReference>? extraReferences = null)
     {
         var source = ComposeSource(extraCSharp);
+        var references = References().ToList();
+        if (extraReferences is not null)
+            references.AddRange(extraReferences);
+
         return CSharpCompilation.Create(
             "Sample",
             new[] { CSharpSyntaxTree.ParseText(source, parseOptions ?? ParseOptions()) },
-            References(),
+            references,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
+    }
+
+    /// <summary>Compiles a tiny assembly that carries a <c>KhamsinConfigAttribute</c>.</summary>
+    internal static MetadataReference CreateAssemblyWithConfig(string assemblyName, string json)
+    {
+        var literal = Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(json, quote: true);
+        var source = $$"""
+            [assembly: global::Khamsin.KhamsinConfigAttribute(Json = {{literal}})]
+            public static class ConfigMarker { }
+            """;
+
+        var compilation = CSharpCompilation.Create(
+            assemblyName,
+            new[] { CSharpSyntaxTree.ParseText(source, ParseOptions()) },
+            References(),
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        using var stream = new MemoryStream();
+        var result = compilation.Emit(stream);
+        if (!result.Success)
+            throw new InvalidOperationException(string.Join(Environment.NewLine, result.Diagnostics));
+
+        return MetadataReference.CreateFromImage(stream.ToArray());
     }
 
     internal static ImmutableArray<MetadataReference> References()

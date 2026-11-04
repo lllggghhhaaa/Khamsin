@@ -9,7 +9,7 @@
     <!-- The task assemblies intentionally live under tasks/, not lib/. -->
     <NoWarn>$(NoWarn);NU5100;NU5128</NoWarn>
     <PackageId>Khamsin</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>lllggghhhaaa</Authors>
     <Copyright>Copyright (c) 2026 Khamsin contributors</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -18,7 +18,7 @@
     <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Initial release: Tailwind-compatible utility CSS for Blazor, generated at build time from a closed, literal class set.</PackageReleaseNotes>
+    <PackageReleaseNotes>Adds library configuration merging: referenced assemblies embed their khamsin.json and consumers merge it under their own configuration.</PackageReleaseNotes>
     <PackageTags>blazor;css;utility-css;dotnet;msbuild;source-generator</PackageTags>
   </PropertyGroup>
 

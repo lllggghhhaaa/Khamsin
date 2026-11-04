@@ -178,6 +178,39 @@ public class ConfigTests
         Assert.Equal("p-4 bg-primary", KhamsinMerger.Merge("p-4", "bg-primary"));
     }
 
+    [Fact]
+    public void Merge_applies_configurations_in_order()
+    {
+        var library = Parse("""
+            {
+              "dark": ".library-dark",
+              "colors": { "primary": "#111111", "brand": "#222222" },
+              "fonts": { "display": "Georgia, serif" },
+              "textSizes": { "display": ["2rem", "2.4rem"] }
+            }
+            """);
+        var app = Parse("""{ "colors": { "primary": "#333333" } }""");
+
+        var merged = KhamsinConfig.Merge([library, app]);
+
+        Assert.Equal(".library-dark", merged.Dark);
+        Assert.Equal("#333333", merged.Colors!["primary"]);
+        Assert.Equal("#222222", merged.Colors!["brand"]);
+        Assert.Equal("Georgia, serif", merged.Fonts!["display"]);
+        Assert.Equal("2rem", merged.TextSizes!["display"].Size);
+    }
+
+    [Fact]
+    public void Merge_leaves_unspecified_entries_for_the_defaults()
+    {
+        var merged = KhamsinConfig.Merge([Parse("""{ "colors": { "primary": "#111111" } }""")]);
+
+        Assert.Null(merged.Spacing);
+        Assert.Null(merged.Fonts);
+        Assert.True(merged.ToTheme().Fonts.ContainsKey("sans"), "built-in tokens still apply");
+        Assert.True(merged.ToTheme().IsKnownColor("ocean-600"), "built-in palette still applies");
+    }
+
     private static KhamsinConfig Parse(string json)
     {
         Assert.True(KhamsinConfig.TryParse(json, out var config, out var errors), string.Join("; ", errors));

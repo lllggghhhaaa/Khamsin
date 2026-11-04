@@ -106,14 +106,55 @@ public sealed class KhamsinConfig
     /// <summary>Loads and parses a configuration file.</summary>
     public static bool TryLoad(string path, out KhamsinConfig? config, out IReadOnlyList<string> errors)
     {
-        if (!File.Exists(path))
+        if (File.Exists(path)) return TryParse(File.ReadAllText(path), out config, out errors);
+        
+        config = null;
+        errors = [$"Configuration file '{path}' was not found."];
+        return false;
+    }
+
+    /// <summary>
+    /// Merges configurations in order. Entries from later configurations override earlier entries
+    /// with the same name; entries no configuration specifies remain unspecified so the built-in
+    /// defaults still apply.
+    /// </summary>
+    public static KhamsinConfig Merge(IEnumerable<KhamsinConfig> configurations)
+    {
+        if (configurations is null)
+            throw new ArgumentNullException(nameof(configurations));
+
+        var merged = new KhamsinConfig();
+        foreach (var config in configurations)
         {
-            config = null;
-            errors = new[] { $"Configuration file '{path}' was not found." };
-            return false;
+            if (config is null)
+                continue;
+
+            if (!string.IsNullOrEmpty(config.Dark)) merged.Dark = config.Dark;
+            if (!string.IsNullOrEmpty(config.Spacing)) merged.Spacing = config.Spacing;
+            merged.Colors = MergeEntries(merged.Colors, config.Colors);
+            merged.Fonts = MergeEntries(merged.Fonts, config.Fonts);
+            merged.Radius = MergeEntries(merged.Radius, config.Radius);
+            merged.Shadows = MergeEntries(merged.Shadows, config.Shadows);
+            merged.TextSizes = MergeEntries(merged.TextSizes, config.TextSizes);
+            merged.Eases = MergeEntries(merged.Eases, config.Eases);
+            merged.Breakpoints = MergeEntries(merged.Breakpoints, config.Breakpoints);
+            merged.Containers = MergeEntries(merged.Containers, config.Containers);
+            merged.Animations = MergeEntries(merged.Animations, config.Animations);
         }
 
-        return TryParse(File.ReadAllText(path), out config, out errors);
+        return merged;
+    }
+
+    private static Dictionary<string, TValue>? MergeEntries<TValue>(
+        Dictionary<string, TValue>? target, Dictionary<string, TValue>? source)
+    {
+        if (source is null || source.Count == 0)
+            return target;
+
+        target ??= new Dictionary<string, TValue>(StringComparer.Ordinal);
+        foreach (var pair in source) target[pair.Key] = pair.Value;
+
+        return target;
     }
 
     /// <summary>Builds a Theme from the built-in defaults with this config's entries merged over them.</summary>
@@ -140,7 +181,7 @@ public sealed class KhamsinConfig
         var merged = new Dictionary<string, AnimationDefinition>(StringComparer.Ordinal);
         foreach (var pair in baseMap) merged[pair.Key] = pair.Value;
 
-        if (overrides != null)
+        if (overrides is not null)
             foreach (var pair in overrides) merged[pair.Key] = pair.Value;
 
         return merged;
@@ -224,7 +265,7 @@ public sealed class KhamsinConfig
         var merged = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var pair in baseMap) merged[pair.Key] = pair.Value;
 
-        if (overrides != null)
+        if (overrides is not null)
             foreach (var pair in overrides) merged[pair.Key] = pair.Value;
 
         return merged;
@@ -236,7 +277,7 @@ public sealed class KhamsinConfig
         var merged = new Dictionary<string, TextSize>(StringComparer.Ordinal);
         foreach (var pair in baseMap) merged[pair.Key] = pair.Value;
 
-        if (overrides != null)
+        if (overrides is not null)
             foreach (var pair in overrides) merged[pair.Key] = pair.Value;
 
         return merged;
@@ -412,7 +453,7 @@ public sealed class KhamsinConfig
                 if (!IsSafeValue(pair.Value.LineHeight)) errors.Add($"'textSizes.{pair.Key}' has an invalid line-height value.");
             }
 
-        if (Animations != null)
+        if (Animations is not null)
             foreach (var pair in Animations)
             {
                 if (!IsSafeValue(pair.Value.Value)) errors.Add($"'animations.{pair.Key}' has an invalid animation shorthand.");
@@ -472,7 +513,7 @@ public sealed class KhamsinConfig
         if (name.Length == 0) return false;
 
         foreach (var c in name)
-            if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-'))
+            if (c is not (>= 'a' and <= 'z' or >= '0' and <= '9' or '-'))
                 return false;
 
         return true;

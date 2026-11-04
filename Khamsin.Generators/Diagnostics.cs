@@ -44,6 +44,15 @@ internal static class Diagnostics
         isEnabledByDefault: true,
         description: "The Khamsin configuration file could not be read or contains invalid entries. The build falls back to the default theme until the file is fixed.");
 
+    internal static readonly DiagnosticDescriptor InvalidReferencedConfiguration = new(
+        id: "KHM006",
+        title: "Invalid referenced Khamsin configuration",
+        messageFormat: "Referenced assembly '{0}' has an invalid Khamsin configuration and was ignored: {1}",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "The Khamsin configuration embedded in a referenced assembly could not be read or contains invalid entries. The build continues with the remaining configurations.");
+
     internal static readonly DiagnosticDescriptor ComponentNotResolvable = new(
         id: "KHM004",
         title: "Component referenced in markup could not be resolved",

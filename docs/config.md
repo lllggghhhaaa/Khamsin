@@ -44,6 +44,22 @@ The generator emits a `Khamsin.ThemeRegistration.g.cs` with a `[ModuleInitialize
 Without it, runtime conflict resolution would not know custom tokens (`bg-primary` would not
 replace a default `bg-white`). First call wins.
 
+## Library configurations
+
+Every project runs the generator, including class libraries. A library with its own `khamsin.json`
+embeds the document as a `[KhamsinConfig(Json = "…")]` assembly attribute. When an app references
+that library, the app's generator and CSS task read the attribute and merge it under the app's own
+configuration, so library tokens validate and emit without being copied into the app.
+
+The merge order is deterministic:
+
+1. Khamsin's built-in defaults.
+2. Referenced assemblies' configurations, in assembly-name order.
+3. The current project's `khamsin.json`.
+
+Later entries win by name, so an app can override a single library token without restating the
+rest. This works the same for `ProjectReference` and `PackageReference` consumers.
+
 ## Example: semantic tokens
 
 ```json

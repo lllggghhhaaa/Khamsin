@@ -10,12 +10,38 @@ namespace Khamsin.Generators.Tests;
 
 public sealed class AnalyzerTests
 {
-    private static async Task<ImmutableArray<Diagnostic>> AnalyzeAsync(string source)
+    private static async Task<ImmutableArray<Diagnostic>> AnalyzeAsync(
+        string source,
+        IEnumerable<MetadataReference>? extraReferences = null)
     {
-        var compilation = GeneratorHarness.CreateCompilation(source);
+        var compilation = GeneratorHarness.CreateCompilation(source, extraReferences: extraReferences);
         var withAnalyzers = compilation.WithAnalyzers(
             ImmutableArray.Create<DiagnosticAnalyzer>(new KhamsinAnalyzer()));
         return await withAnalyzers.GetAnalyzerDiagnosticsAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task Referenced_library_config_allows_its_tokens()
+    {
+        const string source = """
+            using Khamsin;
+
+            namespace Sample
+            {
+                internal static class Styles
+                {
+                    internal static KhamsinClass Card() => Kx.When(true, "bg-brand", "p-4");
+                }
+            }
+            """;
+
+        var library = GeneratorHarness.CreateAssemblyWithConfig(
+            "SampleLib",
+            """{ "colors": { "brand": "#123456" } }""");
+
+        var diagnostics = await AnalyzeAsync(source, [library]);
+
+        Assert.DoesNotContain(diagnostics, d => d.Id == "KHM002");
     }
 
     [Fact]

@@ -64,6 +64,19 @@ internal sealed class BuildFixture : IDisposable
         File.WriteAllText(path, json);
     }
 
+    /// <summary>Writes or removes the library's <c>khamsin.json</c>; null removes the file.</summary>
+    public void SetLibraryConfig(string? json)
+    {
+        var path = Path.Combine(Root, "Lib", "khamsin.json");
+        if (json is null)
+        {
+            if (File.Exists(path)) File.Delete(path);
+            return;
+        }
+
+        File.WriteAllText(path, json);
+    }
+
     public BuildResult Build(string verbosity = "minimal")
     {
         lock (BuildLock)
@@ -91,17 +104,11 @@ internal sealed class BuildFixture : IDisposable
             var error = new StringBuilder();
             process.OutputDataReceived += (_, args) =>
             {
-                if (args.Data != null)
-                {
-                    output.AppendLine(args.Data);
-                }
+                if (args.Data is not null) output.AppendLine(args.Data);
             };
             process.ErrorDataReceived += (_, args) =>
             {
-                if (args.Data != null)
-                {
-                    error.AppendLine(args.Data);
-                }
+                if (args.Data is not null) error.AppendLine(args.Data);
             };
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
@@ -160,6 +167,7 @@ internal sealed class BuildFixture : IDisposable
                 <ProjectReference Include="{core}" />
                 <ProjectReference Include="{generators}" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
               </ItemGroup>
+              <Import Project="{props}" />
             </Project>
             """);
 

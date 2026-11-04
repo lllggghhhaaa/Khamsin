@@ -86,17 +86,18 @@ internal sealed class ProjectSettings(string rootNamespace, string projectDirect
 /// <summary>The parsed configuration for one compilation, or the reason it is unusable.</summary>
 internal sealed class ConfigInput
 {
-    internal static readonly ConfigInput None = new(null, [], string.Empty);
+    internal static readonly ConfigInput None = new(null, [], string.Empty, string.Empty);
 
-    private ConfigInput(KhamsinConfig? config, ImmutableArray<string> errors, string filePath)
+    private ConfigInput(KhamsinConfig? config, ImmutableArray<string> errors, string filePath, string json)
     {
         Config = config;
         Errors = errors;
         FilePath = filePath;
+        Json = json;
     }
 
-    internal static ConfigInput From(KhamsinConfig? config, ImmutableArray<string> errors, string filePath = "")
-        => config is null && errors.Length == 0 ? None : new ConfigInput(config, errors, filePath);
+    internal static ConfigInput From(KhamsinConfig? config, ImmutableArray<string> errors, string filePath = "", string json = "")
+        => config is null && errors.Length == 0 ? None : new ConfigInput(config, errors, filePath, json);
 
     /// <summary>Null when the file was missing or could not be parsed.</summary>
     internal KhamsinConfig? Config { get; }
@@ -104,6 +105,9 @@ internal sealed class ConfigInput
     internal ImmutableArray<string> Errors { get; }
 
     internal string FilePath { get; }
+
+    /// <summary>Raw configuration JSON, embedded in the assembly so consumers can merge it.</summary>
+    internal string Json { get; }
 }
 
 internal sealed class GeneratorInputs(
