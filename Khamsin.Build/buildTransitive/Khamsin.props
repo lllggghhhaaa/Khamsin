@@ -1,0 +1,21 @@
+<Project>
+  <PropertyGroup>
+    <!-- Executable and web projects emit CSS; libraries only carry manifests unless they opt in. -->
+    <KhamsinEmitCss Condition="'$(KhamsinEmitCss)' == '' and ('$(OutputType)' == 'Exe' or '$(OutputType)' == 'WinExe' or '$(UsingMicrosoftNETSdkWeb)' == 'true')">true</KhamsinEmitCss>
+    <KhamsinEmitCss Condition="'$(KhamsinEmitCss)' == ''">false</KhamsinEmitCss>
+    <KhamsinCssFileName Condition="'$(KhamsinCssFileName)' == ''">khamsin.css</KhamsinCssFileName>
+    <KhamsinMinify Condition="'$(KhamsinMinify)' == ''">true</KhamsinMinify>
+    <KhamsinRegisterStaticWebAsset Condition="'$(KhamsinRegisterStaticWebAsset)' == ''">true</KhamsinRegisterStaticWebAsset>
+    <!-- Theme/token configuration. Set to an empty value to disable; a custom path is project-relative. -->
+    <KhamsinConfig Condition="'$(KhamsinConfig)' == ''">khamsin.json</KhamsinConfig>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="RootNamespace" />
+    <CompilerVisibleProperty Include="ProjectDir" />
+    <CompilerVisibleProperty Include="MSBuildProjectDirectory" />
+    <CompilerVisibleProperty Include="KhamsinConfig" />
+    <AdditionalFiles Include="**/*.razor" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" Condition="'$(KhamsinAddRazorAdditionalFiles)' != 'false'" />
+    <AdditionalFiles Include="$(KhamsinConfig)" Condition="'$(KhamsinConfig)' != '' and Exists('$(KhamsinConfig)')" />
+  </ItemGroup>
+</Project>

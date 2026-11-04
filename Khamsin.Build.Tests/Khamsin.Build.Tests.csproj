@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+  </ItemGroup>
+  <!--
+    The fixtures build throw-away projects that reference these outputs. Building them here means a
+    test run always has up-to-date binaries, so the fixture builds can skip project references and
+    never rewrite a repository assembly while another test host is using it.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../Khamsin.Core/Khamsin.Core.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../Khamsin.Blazor/Khamsin.Blazor.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../Khamsin.Generators/Khamsin.Generators.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../Khamsin.Build/Khamsin.Build.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+</Project>

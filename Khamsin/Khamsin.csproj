@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Khamsin</RootNamespace>
+    <AssemblyName>Khamsin</AssemblyName>
+    <Description>Khamsin: build-time utility CSS for Blazor with a closed, literal class set.</Description>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <!-- The task assemblies intentionally live under tasks/, not lib/. -->
+    <NoWarn>$(NoWarn);NU5100;NU5128</NoWarn>
+    <PackageId>Khamsin</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>lllggghhhaaa</Authors>
+    <Copyright>Copyright (c) 2026 Khamsin contributors</Copyright>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/lllggghhhaaa/Khamsin</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/lllggghhhaaa/Khamsin</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>Initial release: Tailwind-compatible utility CSS for Blazor, generated at build time from a closed, literal class set.</PackageReleaseNotes>
+    <PackageTags>blazor;css;utility-css;dotnet;msbuild;source-generator</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Khamsin.Blazor/Khamsin.Blazor.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../Khamsin.Generators/Khamsin.Generators.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../Khamsin.Build/Khamsin.Build.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../Khamsin.Core/Khamsin.Core.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../Khamsin.Blazor/bin/$(Configuration)/net8.0/Khamsin.Blazor.dll" Pack="true" PackagePath="lib/net8.0" Visible="false" />
+    <None Include="../Khamsin.Core/bin/$(Configuration)/netstandard2.0/Khamsin.Core.dll" Pack="true" PackagePath="lib/net8.0" Visible="false" />
+
+    <None Include="../Khamsin.Generators/bin/$(Configuration)/netstandard2.0/Khamsin.Generators.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="../Khamsin.Core/bin/$(Configuration)/netstandard2.0/Khamsin.Core.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+
+    <None Include="../Khamsin.Build/bin/$(Configuration)/net8.0/Khamsin.Build.dll" Pack="true" PackagePath="tasks/net8.0" Visible="false" />
+    <None Include="../Khamsin.Core/bin/$(Configuration)/netstandard2.0/Khamsin.Core.dll" Pack="true" PackagePath="tasks/net8.0" Visible="false" />
+
+    <None Include="../Khamsin.Build/buildTransitive/Khamsin.props" Pack="true" PackagePath="buildTransitive" Visible="false" />
+    <None Include="../Khamsin.Build/buildTransitive/Khamsin.targets" Pack="true" PackagePath="buildTransitive" Visible="false" />
+
+    <None Include="../README.md" Pack="true" PackagePath="/" Visible="false" />
+    <None Include="../LICENSE" Pack="true" PackagePath="/" Visible="false" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,49 @@
+@inherits LayoutComponentBase
+
+<div class="min-h-screen bg-ink-50 text-ink-900">
+    <header class="sticky top-0 z-40 border-b border-ink-200 bg-white shadow-sm">
+        <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+            <a href="/" class="no-underline flex items-center gap-2">
+                <span class="flex size-8 items-center justify-center rounded-lg bg-ocean-600 text-sm font-bold text-white">K</span>
+                <span class="text-lg font-bold tracking-tight">Khamsin</span>
+                <span class="hidden rounded-full bg-ink-100 px-2 py-0.5 text-xs text-ink-500 sm:inline">sample</span>
+            </a>
+            <nav class="flex flex-wrap items-center gap-1">
+                <NavLink class="no-underline rounded-md px-2.5 py-1.5 text-sm text-ink-600 hover:bg-ink-100 hover:text-ink-900"
+                         ActiveClass="bg-ink-900 text-white hover:bg-ink-800 hover:text-white" href="/" Match="NavLinkMatch.All">Home</NavLink>
+                <NavLink class="no-underline rounded-md px-2.5 py-1.5 text-sm text-ink-600 hover:bg-ink-100 hover:text-ink-900"
+                         ActiveClass="bg-ink-900 text-white hover:bg-ink-800 hover:text-white" href="/layout">Layout</NavLink>
+                <NavLink class="no-underline rounded-md px-2.5 py-1.5 text-sm text-ink-600 hover:bg-ink-100 hover:text-ink-900"
+                         ActiveClass="bg-ink-900 text-white hover:bg-ink-800 hover:text-white" href="/spacing">Spacing</NavLink>
+                <NavLink class="no-underline rounded-md px-2.5 py-1.5 text-sm text-ink-600 hover:bg-ink-100 hover:text-ink-900"
+                         ActiveClass="bg-ink-900 text-white hover:bg-ink-800 hover:text-white" href="/typography">Typography</NavLink>
+                <NavLink class="no-underline rounded-md px-2.5 py-1.5 text-sm text-ink-600 hover:bg-ink-100 hover:text-ink-900"
+                         ActiveClass="bg-ink-900 text-white hover:bg-ink-800 hover:text-white" href="/colors">Colors</NavLink>
+                <NavLink class="no-underline rounded-md px-2.5 py-1.5 text-sm text-ink-600 hover:bg-ink-100 hover:text-ink-900"
+                         ActiveClass="bg-ink-900 text-white hover:bg-ink-800 hover:text-white" href="/borders">Borders</NavLink>
+                <NavLink class="no-underline rounded-md px-2.5 py-1.5 text-sm text-ink-600 hover:bg-ink-100 hover:text-ink-900"
+                         ActiveClass="bg-ink-900 text-white hover:bg-ink-800 hover:text-white" href="/motion">Motion</NavLink>
+                <NavLink class="no-underline rounded-md px-2.5 py-1.5 text-sm text-ink-600 hover:bg-ink-100 hover:text-ink-900"
+                         ActiveClass="bg-ink-900 text-white hover:bg-ink-800 hover:text-white" href="/variants">Variants</NavLink>
+                <NavLink class="no-underline rounded-md px-2.5 py-1.5 text-sm text-ink-600 hover:bg-ink-100 hover:text-ink-900"
+                         ActiveClass="bg-ink-900 text-white hover:bg-ink-800 hover:text-white" href="/responsive">Responsive</NavLink>
+                <NavLink class="no-underline rounded-md px-2.5 py-1.5 text-sm text-ink-600 hover:bg-ink-100 hover:text-ink-900"
+                         ActiveClass="bg-ink-900 text-white hover:bg-ink-800 hover:text-white" href="/api">C# API</NavLink>
+                <NavLink class="no-underline rounded-md px-2.5 py-1.5 text-sm text-ink-600 hover:bg-ink-100 hover:text-ink-900"
+                         ActiveClass="bg-ink-900 text-white hover:bg-ink-800 hover:text-white" href="/pipeline">Pipeline</NavLink>
+            </nav>
+        </div>
+    </header>
+
+    <main class="mx-auto w-full max-w-6xl px-4 py-8">
+        @Body
+    </main>
+
+    <footer class="mx-auto max-w-6xl px-4 pb-10 text-xs text-ink-400">
+        <p>
+            Stylesheet: <a class="text-ocean-600 underline" href="/khamsin.css">/khamsin.css</a>
+            (static web asset) &middot; <a class="text-ocean-600 underline" href="/khamsin-endpoint.css">/khamsin-endpoint.css</a>
+            (MapKhamsinCss fallback).
+        </p>
+    </footer>
+</div>

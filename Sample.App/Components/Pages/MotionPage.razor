@@ -1,0 +1,165 @@
+@page "/motion"
+
+<PageTitle>Motion &middot; Khamsin sample</PageTitle>
+
+<div class="mb-8">
+    <h1 class="text-2xl font-bold text-ink-900">Motion and interactivity</h1>
+    <p class="mt-1 text-sm text-ink-500">
+        Transforms, transitions with duration, easing and delay, cursors, selection, pointer events,
+        resizing and form appearance.
+    </p>
+</div>
+
+<DemoSection Title="Transforms" Note="translate, scale, rotate, skew and transform-origin, composed from independent properties.">
+    <div class="flex flex-wrap items-center gap-6 rounded-lg border border-ink-200 p-6">
+        <div class="size-14 rounded-lg bg-ocean-500 transition hover:translate-x-2"></div>
+        <div class="size-14 rounded-lg bg-forest-500 transition hover:scale-125"></div>
+        <div class="size-14 rounded-lg bg-amber-500 transition hover:rotate-45"></div>
+        <div class="size-14 rounded-lg bg-ember-500 transition hover:skew-x-12"></div>
+        <div class="size-14 rounded-lg bg-violet-500 transition hover:-translate-y-1 hover:rotate-6 hover:scale-110"></div>
+        <div class="size-14 origin-top-left rounded-lg bg-teal-500 transition hover:rotate-12"></div>
+        <div class="size-14 rounded-lg bg-rose-500 transition hover:scale-x-150"></div>
+    </div>
+    <p class="text-xs text-ink-500">Hover each tile: translate-x, scale, rotate, skew-x, combined, origin-top-left rotate, scale-x. transform-none resets.</p>
+</DemoSection>
+
+<DemoSection Title="Transitions" Note="transition-property bundles with duration, ease and delay; hover to feel the difference.">
+    <div class="flex flex-wrap items-center gap-4">
+        <div class="rounded-lg bg-ink-800 px-4 py-3 text-xs text-white transition hover:bg-ocean-600">transition (150ms)</div>
+        <div class="rounded-lg bg-ink-800 px-4 py-3 text-xs text-white transition-colors duration-500 hover:bg-forest-600">duration-500</div>
+        <div class="rounded-lg bg-ink-800 px-4 py-3 text-xs text-white transition-all duration-300 ease-in hover:bg-ember-600">ease-in</div>
+        <div class="rounded-lg bg-ink-800 px-4 py-3 text-xs text-white transition-all duration-300 ease-out hover:bg-violet-600">ease-out</div>
+        <div class="rounded-lg bg-ink-800 px-4 py-3 text-xs text-white transition-all duration-300 delay-200 hover:bg-teal-600">delay-200</div>
+        <div class="rounded-lg bg-ink-800 px-4 py-3 text-xs text-white transition-none hover:bg-rose-600">transition-none (instant)</div>
+    </div>
+    <p class="text-xs text-ink-500">Timing tokens: ease-linear, ease-in, ease-out, ease-in-out via the theme.</p>
+</DemoSection>
+
+<DemoSection Title="Cursors" Note="Every cursor token in the registry, hover over the chips.">
+    <div class="flex flex-wrap gap-2 text-xs">
+        <span class="cursor-pointer rounded bg-ink-100 px-2 py-1">cursor-pointer</span>
+        <span class="cursor-default rounded bg-ink-100 px-2 py-1">cursor-default</span>
+        <span class="cursor-wait rounded bg-ink-100 px-2 py-1">cursor-wait</span>
+        <span class="cursor-text rounded bg-ink-100 px-2 py-1">cursor-text</span>
+        <span class="cursor-move rounded bg-ink-100 px-2 py-1">cursor-move</span>
+        <span class="cursor-help rounded bg-ink-100 px-2 py-1">cursor-help</span>
+        <span class="cursor-not-allowed rounded bg-ink-100 px-2 py-1">cursor-not-allowed</span>
+        <span class="cursor-grab rounded bg-ink-100 px-2 py-1">cursor-grab</span>
+        <span class="cursor-grabbing rounded bg-ink-100 px-2 py-1">cursor-grabbing</span>
+        <span class="cursor-zoom-in rounded bg-ink-100 px-2 py-1">cursor-zoom-in</span>
+        <span class="cursor-crosshair rounded bg-ink-100 px-2 py-1">cursor-crosshair</span>
+        <span class="cursor-progress rounded bg-ink-100 px-2 py-1">cursor-progress</span>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Selection and pointer events" Note="select-none blocks selection; pointer-events-none passes clicks through.">
+    <div class="grid gap-3 sm:grid-cols-3">
+        <p class="select-none rounded bg-ink-50 p-2 text-xs">select-none: try to select this text.</p>
+        <p class="select-all rounded bg-ink-50 p-2 text-xs">select-all: click selects the whole block at once.</p>
+        <div class="relative rounded bg-ink-50 p-2 text-xs">
+            <button type="button" class="pointer-events-none absolute inset-0 rounded bg-amber-200/70 text-center">pointer-events-none overlay</button>
+            <span class="text-transparent">spacer</span>
+        </div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Resize and appearance" Note="resize-* on textareas; appearance-none removes native styling.">
+    <div class="grid gap-3 sm:grid-cols-3">
+        <textarea class="resize-none rounded-md border border-ink-300 p-2 text-xs" rows="2">resize-none</textarea>
+        <textarea class="resize-y rounded-md border border-ink-300 p-2 text-xs" rows="2">resize-y</textarea>
+        <textarea class="resize rounded-md border border-ink-300 p-2 text-xs" rows="2">resize (both)</textarea>
+    </div>
+    <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked class="size-5 appearance-none rounded border border-ink-300 bg-white checked:border-forest-600 checked:bg-forest-600" />
+        appearance-none + checked:bg-forest-600
+    </label>
+</DemoSection>
+
+<DemoSection Title="3D transforms" Note="perspective, axis rotations and backface from v4; individual properties compose like their 2D siblings.">
+    <div class="flex flex-wrap items-center gap-6 [perspective:600px] p-4">
+        <div class="size-16 rounded-lg bg-ocean-500 transition-transform duration-500 [transform-style:preserve-3d] hover:rotate-y-45"></div>
+        <div class="size-16 rounded-lg bg-forest-500 transition-transform duration-500 hover:[transform:perspective(400px)_rotateX(35deg)]"></div>
+        <div class="size-16 rounded-lg bg-violet-500 transition-transform duration-500 hover:rotate-z-12"></div>
+        <div class="size-16 rounded-lg bg-amber-500 transition-transform duration-500 hover:-translate-z-6"></div>
+    </div>
+    <p class="text-xs text-ink-500">hover: rotate-y-45, perspective rotateX, rotate-z-12, -translate-z-6 (hover each tile)</p>
+</DemoSection>
+
+<DemoSection Title="Masks" Note="Edge, radial and conic masks compose from position stops; combine layers freely.">
+    <div class="grid grid-cols-2 items-center gap-4 sm:grid-cols-4">
+        <img src="data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%27160%27%20height=%27160%27%3E%3Crect%20width=%27160%27%20height=%27160%27%20fill=%27%232f6bc6%27/%3E%3Ccircle%20cx=%2780%27%20cy=%2780%27%20r=%2740%27%20fill=%27%23f2ab31%27/%3E%3C/svg%3E"
+             alt="top fade" class="aspect-square w-full rounded-lg object-cover mask-t-from-20% mask-t-to-70%" />
+        <img src="data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%27160%27%20height=%27160%27%3E%3Crect%20width=%27160%27%20height=%27160%27%20fill=%27%2347ae81%27/%3E%3Ccircle%20cx=%2780%27%20cy=%2780%27%20r=%2740%27%20fill=%27%23ffffff%27/%3E%3C/svg%3E"
+             alt="radial mask" class="aspect-square w-full rounded-lg object-cover mask-radial-from-20% mask-radial-to-75%" />
+        <img src="data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%27160%27%20height=%27160%27%3E%3Crect%20width=%27160%27%20height=%27160%27%20fill=%27%23e05d42%27/%3E%3Ccircle%20cx=%2780%27%20cy=%2780%27%20r=%2740%27%20fill=%27%232d1b0e%27/%3E%3C/svg%3E"
+             alt="horizontal mask" class="aspect-square w-full rounded-lg object-cover mask-x-from-30% mask-x-to-90%" />
+        <img src="data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%27160%27%20height=%27160%27%3E%3Crect%20width=%27160%27%20height=%27160%27%20fill=%27%237f3bba%27/%3E%3Ccircle%20cx=%2780%27%20cy=%2780%27%20r=%2740%27%20fill=%27%23f5e8d8%27/%3E%3C/svg%3E"
+             alt="conic mask" class="aspect-square w-full rounded-lg object-cover mask-conic-from-10% mask-conic-to-80%" />
+    </div>
+    <p class="text-xs text-ink-500">mask-t, mask-radial, mask-x, mask-conic &mdash; edges compose and intersect.</p>
+</DemoSection>
+
+<DemoSection Title="Touch, overscroll and will-change" Note="Presence demos for scroll-related interaction tokens.">
+    <div class="h-24 touch-pan-y overscroll-y-contain overflow-y-auto rounded-lg border border-ink-200 p-2 will-change-scroll">
+        <p class="text-xs text-ink-500">touch-pan-y overscroll-y-contain will-change-scroll: scrollable on touch devices without scroll chaining.</p>
+        <p class="mt-1 text-xs text-ink-500">Filler line.</p>
+        <p class="mt-1 text-xs text-ink-500">Filler line.</p>
+    </div>
+    <p class="text-xs text-ink-500">touch-manipulation, touch-none, will-change-transform are emitted the same way.</p>
+</DemoSection>
+
+<DemoSection Title="Colored shadows" Note="shadow-&lt;color&gt;/&lt;opacity&gt; re-colors any shadow token; hover to see variant-composed shadow colors.">
+    <div class="flex flex-wrap items-center gap-4">
+        <div class="rounded-lg bg-white p-4 text-xs shadow-lg shadow-ocean-500/40">shadow-lg shadow-ocean-500/40</div>
+        <PrimaryButton Khamsin="@("shadow-md shadow-primary/50 hover:shadow-primary/70")">glowing primary button</PrimaryButton>
+        <div class="rounded-full bg-white p-4 text-xs shadow-xl shadow-violet-300">shadow-xl shadow-violet-300</div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Animations" Note="animate-spin/ping/pulse/bounce ship as theme animation tokens; khamsin.json can register more with keyframes.">
+    <div class="flex flex-wrap items-center gap-6 p-2">
+        <span class="inline-block size-6 rounded-full border-4 border-ink-200 border-t-ocean-600 animate-spin"></span>
+        <span class="relative flex size-6">
+            <span class="absolute inline-flex size-6 rounded-full bg-ember-400 animate-ping opacity-75"></span>
+            <span class="relative inline-flex size-6 rounded-full bg-ember-500"></span>
+        </span>
+        <span class="inline-block size-6 rounded-md bg-forest-500 animate-pulse"></span>
+        <span class="inline-block size-6 rounded-md bg-violet-500 animate-bounce"></span>
+        <span class="text-xs text-ink-500">spin, ping, pulse, bounce &mdash; unused animations never reach the stylesheet</span>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Enter and exit animations" Note="The tw-animate-style set: animate-in/animate-out compose with fade, zoom and slide variables. Tick the checkbox to mount the dialog card.">
+    <input type="checkbox" class="peer sr-only" id="motion-enter-demo" />
+    <label for="motion-enter-demo" class="flex cursor-pointer items-center gap-2 text-sm text-ink-600 peer-checked:font-semibold peer-checked:text-ocean-700">
+        mount the card (runs animate-in fade-in zoom-in-95 slide-in-from-top-2) &mdash; click to toggle
+    </label>
+    <div class="hidden peer-checked:block rounded-card border border-ink-200 bg-white p-4 shadow-lg shadow-primary/20 peer-checked:animate-in peer-checked:fade-in peer-checked:zoom-in-95 peer-checked:slide-in-from-top-2">
+        <p class="font-display text-sm font-semibold">Dialog card</p>
+        <p class="mt-1 text-xs text-ink-500">Mounted by a peer-checked variant; the enter animation plays on class application.</p>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Filters and backdrop filters" Note="Every filter utility composes through --khamsin-* variables; the backdrop: variant styles dialog ::backdrop layers.">
+    <div class="flex flex-wrap items-center gap-3">
+        <div class="size-16 rounded-lg bg-ocean-500 blur-sm"></div>
+        <div class="size-16 rounded-lg bg-forest-500 saturate-200"></div>
+        <div class="size-16 rounded-lg bg-amber-500 grayscale"></div>
+        <div class="size-16 rounded-lg bg-violet-500 hue-rotate-90"></div>
+        <div class="size-16 rounded-lg bg-ember-500 invert"></div>
+        <div class="size-16 rounded-lg bg-teal-500 drop-shadow-lg"></div>
+    </div>
+    <div class="relative h-24 overflow-hidden rounded-lg">
+        <div class="absolute inset-0 bg-ocean-100" style="background-image:radial-gradient(circle at 20% 50%, #4d91d5 0%, transparent 50%), radial-gradient(circle at 80% 50%, #e05d42 0%, transparent 50%)"></div>
+        <div class="absolute inset-x-6 top-6 rounded-lg border border-white/40 bg-white/30 p-3 text-xs backdrop-blur-md backdrop-brightness-110">
+            backdrop-blur-md backdrop-brightness-110 over a painted backdrop
+        </div>
+    </div>
+    <p class="text-xs text-ink-500">blur, saturate-200, grayscale, hue-rotate-90, invert, drop-shadow-lg. The native dialog below carries the backdrop: variant:</p>
+    <dialog class="w-80 rounded-xl p-0 backdrop:bg-ink-950/60 backdrop:backdrop-blur-sm">
+        <div class="p-4">
+            <p class="font-display text-sm font-semibold">Native dialog</p>
+            <p class="mt-1 text-xs text-ink-500">backdrop:bg-ink-950/60 backdrop:backdrop-blur-sm style the ::backdrop layer when this dialog is shown modally.</p>
+        </div>
+    </dialog>
+</DemoSection>

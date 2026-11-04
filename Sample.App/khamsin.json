@@ -1,0 +1,22 @@
+{
+  "dark": ".theme-dark",
+  "colors": {
+    "primary": {
+      "DEFAULT": "var(--primary)",
+      "foreground": "var(--primary-foreground)"
+    },
+    "muted": {
+      "DEFAULT": "var(--muted)",
+      "foreground": "var(--muted-foreground)"
+    }
+  },
+  "fonts": {
+    "display": "Georgia, 'Times New Roman', serif"
+  },
+  "radius": {
+    "card": "1.25rem"
+  },
+  "breakpoints": {
+    "3xl": "112rem"
+  }
+}

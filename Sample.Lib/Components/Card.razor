@@ -1,0 +1,19 @@
+@inherits KhamsinComponentBase
+
+<section class="@(Defaults + Khamsin)">
+    <div class="flex items-center justify-between gap-2">
+        <h2 class="text-lg font-semibold text-ink-900">@Title</h2>
+        <Badge Text="New" />
+    </div>
+    <p class="mt-2 text-sm text-ink-600">@ChildContent</p>
+</section>
+
+@code {
+    private static readonly KhamsinClass Defaults = "rounded-lg border border-ink-200 bg-white p-4 shadow-sm";
+
+    [Parameter]
+    public string Title { get; set; } = "Card";
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

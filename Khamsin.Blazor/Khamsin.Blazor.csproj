@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Khamsin</RootNamespace>
+    <AssemblyName>Khamsin.Blazor</AssemblyName>
+    <Description>Khamsin Blazor runtime: KhamsinClass, Kx helpers, merge cache and the CSS endpoint.</Description>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Khamsin.Core/Khamsin.Core.csproj" />
+  </ItemGroup>
+</Project>

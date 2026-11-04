@@ -1,0 +1,124 @@
+@page "/typography"
+
+<PageTitle>Typography &middot; Khamsin sample</PageTitle>
+
+<div class="mb-8">
+    <h1 class="text-2xl font-bold text-ink-900">Typography</h1>
+    <p class="mt-1 text-sm text-ink-500">Sizes, weights, families, spacing, alignment, transforms, decoration, clamping and wrapping.</p>
+</div>
+
+<DemoSection Title="Text sizes" Note="xs through 6xl, each token carrying its own line height.">
+    <div class="space-y-1">
+        <p class="text-xs">text-xs</p>
+        <p class="text-sm">text-sm</p>
+        <p class="text-base">text-base</p>
+        <p class="text-lg">text-lg</p>
+        <p class="text-xl">text-xl</p>
+        <p class="text-2xl">text-2xl</p>
+        <p class="text-3xl">text-3xl</p>
+        <p class="text-4xl">text-4xl</p>
+        <p class="text-6xl">text-6xl</p>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Weights and families" Note="font-thin through font-black; sans, serif and mono stacks.">
+    <p class="font-thin">font-thin</p>
+    <p class="font-light">font-light</p>
+    <p class="font-normal">font-normal</p>
+    <p class="font-medium">font-medium</p>
+    <p class="font-semibold">font-semibold</p>
+    <p class="font-bold">font-bold</p>
+    <p class="font-black">font-black</p>
+    <p class="font-serif">font-serif for quotes and prose.</p>
+    <p class="font-mono text-sm">font-mono for code, 0.25rem steps, and tokens.</p>
+</DemoSection>
+
+<DemoSection Title="Leading, tracking and indent" Note="Line height, letter spacing and text indentation.">
+    <p class="text-sm leading-none">leading-none packs lines tight against each other for compact stacks.</p>
+    <p class="text-sm leading-relaxed">leading-relaxed gives prose room to breathe between the lines.</p>
+    <p class="text-sm tracking-tight">tracking-tight for dense headings.</p>
+    <p class="text-sm tracking-widest uppercase">tracking-widest for labels</p>
+    <p class="indent-8 text-sm">indent-8 indents the first line of the paragraph, the way print typography has done for centuries.</p>
+</DemoSection>
+
+<DemoSection Title="Alignment and transforms" Note="text-left/center/right/justify plus uppercase, lowercase, capitalize, italic.">
+    <p class="text-left">text-left</p>
+    <p class="text-center">text-center</p>
+    <p class="text-right">text-right</p>
+    <p class="text-justify">text-justify stretches this filler sentence so both edges line up with the box, the way newspapers justify columns of body copy across the full measure of the page.</p>
+    <p class="uppercase">uppercase</p>
+    <p class="lowercase">LOWERCASE</p>
+    <p class="capitalize">capitalize each word here</p>
+    <p class="italic">italic</p>
+</DemoSection>
+
+<DemoSection Title="Decoration" Note="underline, overline, line-through, offsets and colors.">
+    <p><span class="underline">underline</span> &middot; <span class="overline">overline</span> &middot; <span class="line-through">line-through</span></p>
+    <p><span class="underline text-ember-600">colored underline</span></p>
+    <p class="no-underline underline">no-underline before underline on purpose</p>
+</DemoSection>
+
+<DemoSection Title="Truncation and clamping" Note="truncate for one line, line-clamp-N for N lines.">
+    <p class="truncate rounded bg-ink-50 p-2 text-sm">
+        truncate: This long line never wraps. It is cut off with an ellipsis exactly where the box ends instead.
+    </p>
+    <p class="line-clamp-2 rounded bg-ink-50 p-2 text-sm">
+        line-clamp-2: Utility CSS in Blazor is extracted from string literals at build time and emitted as one
+        tree-shaken stylesheet. The runtime never scans the DOM. Class merging is the only dynamic part,
+        and it resolves conflicts between utility groups so consumer overrides beat component defaults.
+        This paragraph is clamped after two lines no matter how much more it would like to say.
+    </p>
+</DemoSection>
+
+<DemoSection Title="Whitespace and wrapping" Note="whitespace modes, break-words and modern text-wrap values.">
+    <div class="grid gap-3 sm:grid-cols-2">
+        <p class="whitespace-nowrap rounded bg-ink-50 p-2 text-xs">whitespace-nowrap keeps this line on a single line forever and ever.</p>
+        <p class="whitespace-pre rounded bg-ink-50 p-2 text-xs">whitespace-pre
+            keeps   every    space.</p>
+        <p class="break-words rounded bg-ink-50 p-2 text-xs">break-words lets the extremelylongunbrokentoken wrapsomewhere instead of overflowing the box.</p>
+        <p class="text-balance rounded bg-ink-50 p-2 text-xs">text-balance balances this short heading block across its lines.</p>
+    </div>
+    <p class="text-pretty max-w-md text-sm">text-pretty avoids orphaned last lines in justified or measure-constrained prose, improving rag quality where the browser supports it.</p>
+</DemoSection>
+
+<DemoSection Title="Lists and vertical alignment" Note="list-none, list-disc, list-decimal, list-inside, marker variant and align-*.">
+    <ul class="list-inside list-disc marker:text-forest-600">
+        <li>list-disc list-inside with marker:text-forest-600</li>
+        <li>second item</li>
+    </ul>
+    <ol class="list-outside list-decimal pl-6 marker:text-ember-600">
+        <li>list-decimal list-outside with marker:text-ember-600</li>
+        <li>second item</li>
+    </ol>
+    <p class="text-sm">
+        inline <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24'%3E%3Crect width='48' height='24' fill='%234d91d5'/%3E%3C/svg%3E"
+                    alt="block" class="align-middle inline size-6 rounded" />
+        align-middle image, and <span class="align-top text-xs rounded bg-amber-100 px-1">align-top span</span>.
+    </p>
+</DemoSection>
+
+<DemoSection Title="Decoration and underline offset" Note="decoration color, thickness and style, plus underline-offset.">
+    <p>
+        <span class="underline decoration-ocean-500 decoration-2 underline-offset-4">thick offset underline</span>
+        &middot;
+        <span class="underline decoration-ember-500 decoration-wavy">wavy decoration</span>
+        &middot;
+        <span class="line-through decoration-dashed decoration-ink-400">dashed line-through</span>
+    </p>
+</DemoSection>
+
+<DemoSection Title="Numeric variants" Note="tabular-nums keeps digits aligned in columns; the slots compose with ordinals and fractions.">
+    <div class="rounded-lg border border-ink-200 p-3 font-mono text-sm">
+        <p class="text-ink-500">default figures: 1234567890 &middot; 0987654321</p>
+        <p class="tabular-nums">tabular-nums: 1234567890 &middot; 0987654321</p>
+        <p class="tabular-nums ordinal">tabular-nums ordinal: 1st 2nd 3rd</p>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Pseudo-element typography" Note="first-letter, first-line and selection variants.">
+    <p class="first-letter:mr-1 first-letter:text-5xl first-letter:font-bold first-letter:text-ocean-700 first-line:font-semibold first-line:tracking-wide selection:bg-amber-200 selection:text-ink-900">
+        Drop cap via first-letter:variant. The first line is styled through first-line:utilities.
+        Select this paragraph with the mouse to see the selection:bg-amber-200 and selection:text-ink-900
+        custom highlight color applied to the native selection.
+    </p>
+</DemoSection>

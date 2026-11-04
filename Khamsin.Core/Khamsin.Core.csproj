@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Khamsin</RootNamespace>
+    <AssemblyName>Khamsin.Core</AssemblyName>
+    <Description>Khamsin engine: utility parser, registry, theme, CSS emitter and class merger.</Description>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+</Project>

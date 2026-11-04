@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Sample.Lib</RootNamespace>
+    <KhamsinEmitCss>false</KhamsinEmitCss>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- ProjectReference analyzers do not flow their dependencies; the package ships Core next to the
+         generator and MSBuild adds both as analyzers. Mirror that for repo development. -->
+    <Analyzer Include="$(MSBuildThisFileDirectory)../Khamsin.Core/bin/$(Configuration)/netstandard2.0/Khamsin.Core.dll" />
+    <ProjectReference Include="../Khamsin.Blazor/Khamsin.Blazor.csproj" />
+    <ProjectReference Include="../Khamsin.Core/Khamsin.Core.csproj" />
+    <ProjectReference Include="../Khamsin.Generators/Khamsin.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+</Project>

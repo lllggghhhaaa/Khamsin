@@ -1,0 +1,120 @@
+@page "/borders"
+
+<PageTitle>Borders &amp; effects &middot; Khamsin sample</PageTitle>
+
+<div class="mb-8">
+    <h1 class="text-2xl font-bold text-ink-900">Borders and effects</h1>
+    <p class="mt-1 text-sm text-ink-500">Widths, styles, side selectors, radii, dividers, shadows, rings and outlines.</p>
+</div>
+
+<DemoSection Title="Border widths and styles" Note="border defaults to 1px solid; 0, 2, 4, 8 step up; style variants.">
+    <div class="flex flex-wrap items-center gap-3">
+        <div class="rounded border-0 bg-ink-100 p-3 text-xs">border-0</div>
+        <div class="rounded border bg-white p-3 text-xs">border (1px)</div>
+        <div class="rounded border-2 bg-white p-3 text-xs">border-2</div>
+        <div class="rounded border-4 bg-white p-3 text-xs">border-4</div>
+        <div class="rounded border-8 bg-white p-3 text-xs">border-8</div>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+        <div class="rounded border-2 border-solid border-ink-400 bg-white p-3 text-xs">solid</div>
+        <div class="rounded border-2 border-dashed border-ink-400 bg-white p-3 text-xs">dashed</div>
+        <div class="rounded border-2 border-dotted border-ink-400 bg-white p-3 text-xs">dotted</div>
+        <div class="rounded border-4 border-double border-ink-400 bg-white p-3 text-xs">double</div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Per-side borders" Note="border-x, border-y, border-t, border-r, border-b, border-l with widths 0, 2, 4 and 8.">
+    <div class="flex flex-wrap items-center gap-3">
+        <div class="border-x-4 border-x-ocean-500 bg-white p-3 text-xs">border-x-4</div>
+        <div class="border-y-4 border-y-forest-500 bg-white p-3 text-xs">border-y-4</div>
+        <div class="border-t-4 border-t-ember-500 bg-white p-3 text-xs">border-t-4</div>
+        <div class="border-r-8 border-r-violet-500 bg-white p-3 text-xs">border-r-8</div>
+        <div class="border-b-2 border-b-amber-500 bg-white p-3 text-xs">border-b-2</div>
+        <div class="border-l-4 border-l-rose-500 bg-white p-3 text-xs">border-l-4</div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Radii" Note="The full radius scale plus per-side and per-corner tokens.">
+    <div class="flex flex-wrap items-end gap-3">
+        <div class="size-16 rounded-none bg-ocean-100 p-2 text-xs">none</div>
+        <div class="size-16 rounded-sm bg-ocean-200 p-2 text-xs">sm</div>
+        <div class="size-16 rounded-md bg-ocean-300 p-2 text-xs">md</div>
+        <div class="size-16 rounded-lg bg-ocean-400 p-2 text-xs">lg</div>
+        <div class="size-16 rounded-xl bg-ocean-500 p-2 text-xs">xl</div>
+        <div class="size-16 rounded-2xl bg-ocean-600 p-2 text-xs text-white">2xl</div>
+        <div class="size-16 rounded-3xl bg-ocean-700 p-2 text-xs text-white">3xl</div>
+        <div class="size-16 rounded-full bg-ocean-800 p-2 text-xs text-white">full</div>
+    </div>
+    <div class="flex flex-wrap items-end gap-3">
+        <div class="size-16 rounded-t-2xl bg-forest-200 p-2 text-xs">t-2xl</div>
+        <div class="size-16 rounded-r-full bg-forest-300 p-2 text-xs">r-full</div>
+        <div class="size-16 rounded-b-xl bg-forest-400 p-2 text-xs">b-xl</div>
+        <div class="size-16 rounded-l-3xl bg-forest-500 p-2 text-xs text-white">l-3xl</div>
+        <div class="size-16 rounded-tl-2xl bg-amber-200 p-2 text-xs">tl-2xl</div>
+        <div class="size-16 rounded-tr-2xl bg-amber-300 p-2 text-xs">tr-2xl</div>
+        <div class="size-16 rounded-br-2xl bg-amber-400 p-2 text-xs">br-2xl</div>
+        <div class="size-16 rounded-bl-2xl bg-amber-500 p-2 text-xs">bl-2xl</div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Shadows" Note="The full shadow scale, including inner and none.">
+    <div class="flex flex-wrap items-end gap-4 rounded-lg bg-ink-50 p-4">
+        <div class="size-14 rounded-lg bg-white shadow-sm p-1 text-xs">sm</div>
+        <div class="size-14 rounded-lg bg-white shadow-md p-1 text-xs">md</div>
+        <div class="size-14 rounded-lg bg-white shadow-lg p-1 text-xs">lg</div>
+        <div class="size-14 rounded-lg bg-white shadow-xl p-1 text-xs">xl</div>
+        <div class="size-14 rounded-lg bg-white shadow-2xl p-1 text-xs">2xl</div>
+        <div class="size-14 rounded-lg bg-white shadow-inner p-1 text-xs">inner</div>
+        <div class="size-14 rounded-lg bg-white shadow-none border border-ink-200 p-1 text-xs">none</div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="v4 shadows" Note="Inset shadows, inset rings and text shadows with their color companions; drop-shadow recolors too.">
+    <div class="flex flex-wrap items-center gap-4">
+        <div class="rounded-lg bg-ink-50 p-4 text-xs inset-shadow-sm">inset-shadow-sm</div>
+        <div class="rounded-lg bg-ink-50 p-4 text-xs inset-shadow-md inset-shadow-ocean-600/40">inset-shadow-md colored</div>
+        <div class="rounded-lg bg-white p-4 text-xs inset-ring-2 inset-ring-forest-500">inset-ring-2</div>
+        <p class="text-lg font-bold text-ocean-700 text-shadow-lg text-shadow-ink-900/30">text-shadow-lg</p>
+        <div class="rounded-lg bg-white p-4 text-xs drop-shadow-lg drop-shadow-violet-500/50">drop-shadow colored</div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Rings" Note="Box-shadow rings: default 3px, width steps, inset and color with opacity.">
+    <div class="flex flex-wrap items-center gap-3">
+        <div class="size-14 rounded-full bg-white ring p-2 text-xs">ring</div>
+        <div class="size-14 rounded-full bg-white ring-1 ring-ink-300 p-2 text-xs">ring-1</div>
+        <div class="size-14 rounded-full bg-white ring-2 ring-ocean-500 p-2 text-xs">ring-2</div>
+        <div class="size-14 rounded-full bg-white ring-4 ring-forest-500/50 p-2 text-xs">ring-4 /50</div>
+        <div class="size-14 rounded-full bg-white ring-8 ring-violet-300 p-2 text-xs">ring-8</div>
+        <div class="size-14 rounded-full bg-ink-100 ring-4 ring-inset ring-ember-500 p-2 text-xs">inset</div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Outlines" Note="outline width, style and offset on statically visible boxes.">
+    <div class="flex flex-wrap items-center gap-3">
+        <div class="rounded-lg bg-white p-3 text-xs outline outline-ink-300">outline</div>
+        <div class="rounded-lg bg-white p-3 text-xs outline-2 outline-dashed outline-ember-500 outline-offset-4">outline-2 dashed offset-4</div>
+        <div class="rounded-lg bg-white p-3 text-xs outline-4 outline-double outline-forest-600">outline-4 double</div>
+        <button type="button" class="rounded-md bg-ocean-600 px-4 py-2 text-sm text-white focus:outline-2 focus:outline-offset-2 focus:outline-amber-400">
+            focus me for focus:outline
+        </button>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Table utilities" Note="table-fixed, border-collapse and caption placement.">
+    <table class="w-full table-fixed border-collapse rounded-lg text-sm">
+        <caption class="caption-top pb-2 text-xs text-ink-500">caption-top</caption>
+        <thead>
+            <tr>
+                <th class="border border-ink-300 bg-ink-100 p-2 text-left">Feature</th>
+                <th class="border border-ink-300 bg-ink-100 p-2 text-left">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="truncate border border-ink-200 p-2">table-fixed border-collapse with a long cell value that truncates</td>
+                <td class="border border-ink-200 p-2">included</td>
+            </tr>
+        </tbody>
+    </table>
+</DemoSection>

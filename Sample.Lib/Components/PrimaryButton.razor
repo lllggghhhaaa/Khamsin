@@ -1,0 +1,10 @@
+@inherits KhamsinComponentBase
+
+<button type="button" class="@(Defaults + Khamsin)">@ChildContent</button>
+
+@code {
+    private static readonly KhamsinClass Defaults = "inline-flex items-center justify-center rounded-md bg-ocean-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-ocean-700 focus-visible:outline-2 focus-visible:outline-offset-2 active:bg-ocean-800 disabled:cursor-not-allowed disabled:opacity-50";
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

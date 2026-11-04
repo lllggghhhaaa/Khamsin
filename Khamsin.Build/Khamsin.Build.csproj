@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0</TargetFrameworks>
+    <RootNamespace>Khamsin.Build</RootNamespace>
+    <AssemblyName>Khamsin.Build</AssemblyName>
+    <Description>Khamsin MSBuild task: collects used components and emits the static stylesheet.</Description>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Build.Framework" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Build.Utilities.Core" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Khamsin.Core/Khamsin.Core.csproj" />
+  </ItemGroup>
+</Project>

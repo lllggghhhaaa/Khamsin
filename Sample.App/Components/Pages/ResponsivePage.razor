@@ -1,0 +1,106 @@
+@page "/responsive"
+
+<PageTitle>Responsive &middot; Khamsin sample</PageTitle>
+
+<div class="mb-8">
+    <h1 class="text-2xl font-bold text-ink-900">Responsive and media variants</h1>
+    <p class="mt-1 text-sm text-ink-500">
+        Breakpoints sm &rarr; 2xl, max-* variants, print, motion and contrast preferences, orientation
+        and forced colors. Resize the window to watch the demos change.
+    </p>
+</div>
+
+<DemoSection Title="Breakpoint ladder" Note="Each tile switches color as the viewport passes 40, 48, 64, 80 and 96 rem.">
+    <div class="grid gap-2 text-xs sm:grid-cols-5">
+        <div class="rounded-lg bg-ember-200 p-3 sm:bg-teal-200 md:bg-ocean-200 lg:bg-forest-200 xl:bg-amber-200 2xl:bg-violet-200">
+            base &rarr; sm &rarr; md &rarr; lg &rarr; xl &rarr; 2xl
+        </div>
+        <div class="rounded-lg bg-ember-200 p-3 sm:bg-teal-200 md:bg-ocean-200 lg:bg-forest-200 xl:bg-amber-200 2xl:bg-violet-200">
+            identical classes: the grid becomes five columns at sm
+        </div>
+        <div class="rounded-lg bg-ember-200 p-3 sm:bg-teal-200 md:bg-ocean-200 lg:bg-forest-200 xl:bg-amber-200 2xl:bg-violet-200">
+            every tile recolors at the same width
+        </div>
+        <div class="rounded-lg bg-ember-200 p-3 sm:bg-teal-200 md:bg-ocean-200 lg:bg-forest-200 xl:bg-amber-200 2xl:bg-violet-200">
+            base is ember, sm teal, md ocean
+        </div>
+        <div class="rounded-lg bg-ember-200 p-3 sm:bg-teal-200 md:bg-ocean-200 lg:bg-forest-200 xl:bg-amber-200 2xl:bg-violet-200">
+            lg forest, xl amber, 2xl violet
+        </div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Stacking to row" Note="The canonical pattern: flex-col by default, flex-row from sm upward.">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div class="rounded-lg bg-ocean-100 p-4 text-sm">flex-col &rarr; sm:flex-row</div>
+        <div class="flex-1 rounded-lg border border-dashed border-ocean-300 p-4 text-sm sm:flex-none sm:w-64">sm:w-64 sm:flex-none</div>
+        <div class="rounded-lg bg-forest-100 p-4 text-sm sm:ml-auto">sm:ml-auto</div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="max-* variants" Note="Mobile-first above, desktop-first below: max-lg applies below the lg breakpoint.">
+    <div class="rounded-lg bg-forest-100 p-3 text-sm max-lg:bg-ember-100">
+        max-lg:bg-ember-100 &mdash; ember while the viewport is under 64rem, forest above it.
+    </div>
+</DemoSection>
+
+<DemoSection Title="Print" Note="print:hidden removes chrome on paper; hidden print:block reveals print-only content.">
+    <p class="print:hidden text-sm">This paragraph is hidden when the page is printed (print:hidden).</p>
+    <p class="hidden print:block text-sm">This paragraph only appears in print (hidden print:block).</p>
+    <p class="text-xs text-ink-500">Use the browser print preview to verify.</p>
+</DemoSection>
+
+<DemoSection Title="Motion preference" Note="motion-safe/motion-reduce gate animation-dependent styles on prefers-reduced-motion.">
+    <div class="flex flex-wrap gap-3">
+        <div class="rounded-lg bg-violet-100 p-3 text-xs transition-transform motion-safe:duration-700 hover:scale-125 motion-safe:hover:rotate-3">
+            motion-safe: hover scales and rotates
+        </div>
+        <div class="rounded-lg bg-violet-100 p-3 text-xs transition-transform duration-700 motion-reduce:transition-none hover:scale-125">
+            motion-reduce:transition-none &mdash; instantly switches when reduced motion is on
+        </div>
+    </div>
+    <p class="text-xs text-ink-500">Change the OS "reduce motion" setting and reload to flip these.</p>
+</DemoSection>
+
+<DemoSection Title="Contrast, orientation and forced colors" Note="Media-query variants for user preferences and device posture.">
+    <div class="grid gap-2 text-xs sm:grid-cols-2">
+        <div class="rounded-lg bg-ink-100 p-3 contrast-more:ring-2 contrast-more:ring-ink-900">
+            contrast-more: adds a hard ring when the OS requests more contrast
+        </div>
+        <div class="rounded-lg bg-amber-100 p-3 landscape:bg-teal-200 portrait:bg-ember-200">
+            landscape:bg-teal-200 portrait:bg-ember-200 &mdash; recolors with orientation
+        </div>
+        <div class="rounded-lg border border-ink-300 p-3 forced-colors:border-dashed">
+            forced-colors:border-dashed under forced colors mode
+        </div>
+        <div class="rounded-lg bg-white p-3 dark:bg-ink-800">
+            dark:bg-ink-800 &mdash; activates when an ancestor carries .dark
+        </div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Container queries" Note="The container utility names a container; the sm and max-lg container variants respond to its size, not the viewport. The at-classes come from C# because Razor reads a bare at-sign as an expression.">
+    <div class="rounded-lg border border-dashed border-ink-300 p-3 @CSharpExamples.ContainerQueries.Container.Value">
+        <div class="@CSharpExamples.ContainerQueries.Responsive.Value">
+            <div class="rounded bg-teal-100 p-2 text-xs">responsive to the box</div>
+            <div class="rounded bg-teal-100 p-2 text-xs">sm: two columns</div>
+            <div class="rounded bg-teal-100 p-2 text-xs">2xl: four columns</div>
+            <div class="rounded bg-teal-100 p-2 text-xs">named forms: sm/card</div>
+        </div>
+    </div>
+    <p class="text-xs text-ink-500">Resize the window and compare with the viewport-based demos above.</p>
+</DemoSection>
+
+<DemoSection Title="Arbitrary media queries" Note="Any media query can become a variant; these classes come from C# because Razor reads a bare at-sign as an expression.">
+    <div class="rounded-lg border border-ink-200 p-3">
+        <span class="hidden text-sm text-forest-700 @CSharpExamples.ArbitraryVariants.HoverDevicesOnly.Value">
+            [@@media(hover:hover)]:inline &mdash; you are on a device with hover.
+        </span>
+        <span class="inline text-sm text-ember-700 @CSharpExamples.ArbitraryVariants.NonHoverDevicesOnly.Value">
+            [@@media(hover:hover)]: this device reports no hover.
+        </span>
+    </div>
+    <div class="hidden rounded-lg bg-ocean-100 p-3 text-sm @CSharpExamples.ArbitraryVariants.WideBandOnly.Value">
+        [@@media(min-width:80rem)and(max-width:90rem)]:block &mdash; a 10rem-wide viewport band.
+    </div>
+</DemoSection>

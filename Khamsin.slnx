@@ -1,0 +1,13 @@
+<Solution>
+  <Project Path="Khamsin/Khamsin.csproj" />
+  <Project Path="Khamsin.Core/Khamsin.Core.csproj" />
+  <Project Path="Khamsin.Generators/Khamsin.Generators.csproj" />
+  <Project Path="Khamsin.Build/Khamsin.Build.csproj" />
+  <Project Path="Khamsin.Blazor/Khamsin.Blazor.csproj" />
+  <Project Path="Khamsin.Core.Tests/Khamsin.Core.Tests.csproj" />
+  <Project Path="Khamsin.Generators.Tests/Khamsin.Generators.Tests.csproj" />
+  <Project Path="Khamsin.Blazor.Tests/Khamsin.Blazor.Tests.csproj" />
+  <Project Path="Khamsin.Build.Tests/Khamsin.Build.Tests.csproj" />
+  <Project Path="Sample.Lib/Sample.Lib.csproj" />
+  <Project Path="Sample.App/Sample.App.csproj" />
+</Solution>

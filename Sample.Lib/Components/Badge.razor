@@ -1,0 +1,10 @@
+@inherits KhamsinComponentBase
+
+<span class="@(Defaults + Khamsin)">@Text</span>
+
+@code {
+    private static readonly KhamsinClass Defaults = "inline-flex items-center rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-800";
+
+    [Parameter]
+    public string Text { get; set; } = string.Empty;
+}

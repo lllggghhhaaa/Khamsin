@@ -1,0 +1,133 @@
+@page "/layout"
+
+<PageTitle>Layout &middot; Khamsin sample</PageTitle>
+
+<div class="mb-8">
+    <h1 class="text-2xl font-bold text-ink-900">Layout</h1>
+    <p class="mt-1 text-sm text-ink-500">Display, positioning, flexbox, grid, overflow, aspect ratio, object fit and columns.</p>
+</div>
+
+<DemoSection Title="Display" Note="block, inline, inline-block, flex, grid, hidden and flow-root.">
+    <div class="space-y-2">
+        <div class="block rounded-md bg-ocean-100 p-2 text-sm">display:block</div>
+        <span class="inline-block rounded-md bg-forest-100 p-2 text-sm">display:inline-block</span>
+        <span class="inline rounded-md bg-amber-100 p-2 text-sm">display:inline</span>
+        <div class="hidden">display:none &mdash; you should not see this</div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Screen-reader utilities" Note="sr-only keeps content accessible; not-sr-only restores it.">
+    <p class="text-sm">
+        <span class="sr-only">Hidden visually, present for screen readers. </span>
+        <span>Visible text. </span>
+        <span class="sr-only not-sr-only">Restored by not-sr-only.</span>
+    </p>
+</DemoSection>
+
+<DemoSection Title="Position" Note="static, relative, absolute, fixed, sticky, with inset, negative insets and z-index.">
+    <div class="relative h-40 rounded-lg border border-ink-200 bg-ink-50">
+        <div class="absolute left-2 top-2 rounded-md bg-ocean-600 px-2 py-1 text-xs text-white">absolute top-2 left-2</div>
+        <div class="absolute bottom-2 right-2 rounded-md bg-forest-600 px-2 py-1 text-xs text-white">absolute bottom-2 right-2</div>
+        <div class="absolute -top-2 left-1/2 rounded-md bg-ember-600 px-2 py-1 text-xs text-white">negative -top-2</div>
+        <div class="absolute inset-x-4 bottom-10 rounded-md border border-dashed border-ink-300 bg-white px-2 py-1 text-xs">inset-x-4 bottom-10</div>
+        <div class="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-md bg-ink-900 px-2 py-1 text-xs text-white">z-10 centered</div>
+    </div>
+    <div class="h-24 overflow-y-auto rounded-lg border border-ink-200 p-3">
+        <div class="sticky top-0 rounded-md bg-amber-200 px-2 py-1 text-xs">sticky top-0 (scroll this box)</div>
+        @foreach (var i in Enumerable.Range(1, 12))
+        {
+            <p class="mt-1 text-xs text-ink-500">Scrollable filler line @i</p>
+        }
+    </div>
+</DemoSection>
+
+<DemoSection Title="Flexbox" Note="Direction, wrap, grow/shrink, basis, align, justify, self and order.">
+    <div class="flex items-center justify-between gap-2 rounded-lg border border-ink-200 p-3">
+        <span class="rounded bg-ocean-100 px-2 py-1 text-xs">justify-between</span>
+        <span class="rounded bg-ocean-100 px-2 py-1 text-xs">items-center</span>
+        <span class="rounded bg-ocean-100 px-2 py-1 text-xs">gap-2</span>
+    </div>
+    <div class="flex flex-wrap items-stretch gap-2 rounded-lg border border-ink-200 p-3">
+        <span class="grow rounded bg-forest-100 px-2 py-1 text-xs">grow</span>
+        <span class="grow-0 basis-32 rounded bg-forest-100 px-2 py-1 text-xs">grow-0 basis-32</span>
+        <span class="shrink-0 rounded bg-forest-100 px-2 py-1 text-xs">shrink-0</span>
+    </div>
+    <div class="flex flex-col-reverse items-start gap-1 rounded-lg border border-ink-200 p-3">
+        <span class="rounded bg-violet-100 px-2 py-1 text-xs">flex-col-reverse: DOM 1</span>
+        <span class="rounded bg-violet-100 px-2 py-1 text-xs">flex-col-reverse: DOM 2</span>
+        <span class="rounded bg-violet-100 px-2 py-1 text-xs">flex-col-reverse: DOM 3</span>
+    </div>
+    <div class="flex items-center gap-2 rounded-lg border border-ink-200 p-3">
+        <span class="order-last rounded bg-amber-100 px-2 py-1 text-xs">order-last (DOM first)</span>
+        <span class="order-first rounded bg-amber-100 px-2 py-1 text-xs">order-first (DOM second)</span>
+        <span class="self-end rounded bg-amber-100 px-2 py-1 text-xs">self-end</span>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Grid" Note="Explicit and auto tracks, spans, placement and place-* alignment.">
+    <div class="grid grid-cols-3 gap-2">
+        <div class="col-span-2 rounded-md bg-teal-100 p-3 text-xs">col-span-2</div>
+        <div class="rounded-md bg-teal-50 p-3 text-xs">auto</div>
+        <div class="row-span-2 rounded-md bg-teal-200 p-3 text-xs">row-span-2</div>
+        <div class="rounded-md bg-teal-50 p-3 text-xs">auto</div>
+        <div class="col-start-1 row-start-3 rounded-md bg-teal-50 p-3 text-xs">col-start-1 row-start-3</div>
+    </div>
+    <div class="grid auto-rows-fr grid-cols-4 place-items-center gap-2">
+        <div class="h-12 rounded bg-lime-100 p-2 text-xs">place-items-center</div>
+        <div class="h-12 rounded bg-lime-100 p-2 text-xs">auto-rows-fr</div>
+        <div class="h-12 rounded bg-lime-100 p-2 text-xs">grid-cols-4</div>
+        <div class="h-12 rounded bg-lime-100 p-2 text-xs">gap-2</div>
+    </div>
+    <div class="grid place-content-center gap-2 rounded-lg border border-ink-200 p-3 [grid-template-columns:repeat(3,minmax(0,120px))]">
+        <div class="rounded bg-sand-100 p-2 text-xs">arbitrary</div>
+        <div class="rounded bg-sand-100 p-2 text-xs">[grid-template-columns:...]</div>
+        <div class="rounded bg-sand-100 p-2 text-xs">place-content-center</div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Overflow and scroll behavior" Note="overflow-auto, overflow-hidden, overflow-clip, overscroll and scroll-smooth.">
+    <div class="grid gap-3 sm:grid-cols-3">
+        <div class="h-24 overflow-auto rounded-lg border border-ink-200 p-2">
+            <p class="text-xs text-ink-500">overflow-auto with enough filler to scroll. Line after line of small print that keeps going.</p>
+            <p class="mt-1 text-xs text-ink-500">More filler. More filler. More filler.</p>
+        </div>
+        <div class="h-24 overflow-hidden rounded-lg border border-ink-200 p-2">
+            <p class="text-xs text-ink-500">overflow-hidden clips this filler text at the box edge instead of scrolling it.</p>
+            <p class="mt-1 text-xs text-ink-500">Hidden filler. Hidden filler.</p>
+        </div>
+    <div class="h-24 overflow-y-scroll overscroll-contain scroll-smooth rounded-lg border border-ink-200 p-2">
+        <p class="text-xs text-ink-500">overflow-y-scroll overscroll-contain scroll-smooth.</p>
+        <p class="mt-1 text-xs text-ink-500">Chained filler text.</p>
+    </div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Aspect ratio and object fit" Note="aspect-square, aspect-video, arbitrary ratios, object-cover and object-position.">
+    <div class="grid grid-cols-3 items-center gap-3">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Crect width='320' height='320' fill='%232f6bc6'/%3E%3Ccircle cx='160' cy='120' r='70' fill='%23f2ab31'/%3E%3Crect x='40' y='210' width='240' height='60' rx='12' fill='%2347ae81'/%3E%3C/svg%3E"
+             alt="square demo" class="aspect-square w-full rounded-lg object-cover" />
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Crect width='320' height='320' fill='%232f6bc6'/%3E%3Ccircle cx='160' cy='120' r='70' fill='%23f2ab31'/%3E%3Crect x='40' y='210' width='240' height='60' rx='12' fill='%2347ae81'/%3E%3C/svg%3E"
+             alt="video demo" class="aspect-video w-full rounded-lg object-cover object-bottom" />
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Crect width='320' height='320' fill='%232f6bc6'/%3E%3Ccircle cx='160' cy='120' r='70' fill='%23f2ab31'/%3E%3Crect x='40' y='210' width='240' height='60' rx='12' fill='%2347ae81'/%3E%3C/svg%3E"
+             alt="contain demo" class="aspect-[3/2] w-full rounded-lg border border-ink-200 object-contain object-left-top" />
+    </div>
+    <p class="text-xs text-ink-500">aspect-square, aspect-video + object-cover object-bottom, aspect-[3/2] + object-contain object-left-top.</p>
+</DemoSection>
+
+<DemoSection Title="Columns and fragmentation" Note="Multi-column layout with break-inside and column gap.">
+    <div class="columns-2 gap-6 rounded-lg border border-ink-200 p-4 text-sm text-ink-600 [&>p]:mb-3">
+        <p class="break-inside-avoid">Multi-column text flows from one column into the next, like a newspaper.</p>
+        <p class="break-inside-avoid">break-inside-avoid keeps each paragraph unsplit across the column boundary.</p>
+        <p>The rest of the text is free to break wherever the columns need balance to look right.</p>
+        <p class="break-after-column">break-after-column forces a column break after this paragraph.</p>
+        <p>Filler text for the final column so the layout has something to distribute.</p>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Isolation and blending" Note="isolate contains stacking contexts; mix-blend composites against the backdrop.">
+    <div class="isolate relative h-28 rounded-lg border border-ink-200">
+        <div class="absolute left-4 top-4 size-20 rounded-lg bg-amber-400"></div>
+        <div class="absolute left-14 top-10 size-20 rounded-lg bg-ocean-500 mix-blend-multiply"></div>
+        <div class="absolute bottom-2 right-2 rounded bg-white/80 px-2 py-1 text-xs">isolate + mix-blend-multiply</div>
+    </div>
+</DemoSection>

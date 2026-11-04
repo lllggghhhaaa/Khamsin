@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Khamsin sample</title>
+    <link rel="stylesheet" href="khamsin.css" />
+    <style>
+        /* Semantic token values for the khamsin.json config. Utilities like bg-primary resolve to
+           var(--color-primary), which points here; .theme-dark flips the values, and khamsin.json
+           maps the dark: variant to .theme-dark so the same flip drives dark: utilities. */
+        :root {
+            --primary: #c2410c;
+            --primary-foreground: #fff8f3;
+            --muted: #eff0f1;
+            --muted-foreground: #6e7787;
+        }
+
+        .theme-dark {
+            --primary: #e06b40;
+            --primary-foreground: #1e1209;
+            --muted: #3a2518;
+            --muted-foreground: #b89b82;
+        }
+    </style>
+</head>
+<body>
+    <Routes />
+    <script src="_framework/blazor.web.js"></script>
+</body>
+</html>

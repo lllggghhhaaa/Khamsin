@@ -1,0 +1,94 @@
+<Project>
+  <PropertyGroup>
+  </PropertyGroup>
+
+  <UsingTask TaskName="Khamsin.Build.KhamsinEmitCss" AssemblyFile="$(KhamsinTaskAssembly)" />
+
+  <Target Name="KhamsinPrepareSources" Condition="'$(KhamsinEmitCss)' == 'true'">
+    <PropertyGroup>
+      <KhamsinCssOutputPath Condition="'$(KhamsinCssOutputPath)' == ''">$(IntermediateOutputPath)$(KhamsinCssFileName)</KhamsinCssOutputPath>
+      <_KhamsinSettingsPath>$(IntermediateOutputPath)khamsin.settings</_KhamsinSettingsPath>
+      <KhamsinConfigFullPath Condition="'$(KhamsinConfig)' != '' and Exists('$(KhamsinConfig)')">$([System.IO.Path]::GetFullPath('$(KhamsinConfig)', '$(MSBuildProjectDirectory)'))</KhamsinConfigFullPath>
+      <KhamsinConfigFullPath Condition="'$(KhamsinConfigFullPath)' == ''"></KhamsinConfigFullPath>
+    </PropertyGroup>
+    <!--
+      The output file stays khamsin.css, so toggling minification would otherwise leave a stale
+      stylesheet. This settings file is an input to the CSS target and only changes when a setting
+      does, which forces exactly one regeneration.
+    -->
+    <WriteLinesToFile File="$(_KhamsinSettingsPath)"
+                      Lines="minify=$(KhamsinMinify)"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <!--
+        Generated sources in obj/ are rewritten by every build, so including them would make the
+        CSS target run even when nothing user-visible changed. Only real project sources count.
+      -->
+      <_KhamsinSource Include="@(Compile)"
+                      Exclude="$(BaseIntermediateOutputPath)**/*.cs;$(BaseOutputPath)**/*.cs;obj/**/*.cs;bin/**/*.cs" />
+      <_KhamsinSource Include="$(MSBuildProjectDirectory)/**/*.razor"
+                      Exclude="$(MSBuildProjectDirectory)/obj/**;$(MSBuildProjectDirectory)/bin/**" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    Runs after CoreCompile because the consumer assembly is the source of truth for which library
+    components are rendered. Inputs/Outputs make a no-op build skip the task entirely.
+  -->
+  <Target Name="KhamsinGenerateCss"
+          AfterTargets="CoreCompile"
+          DependsOnTargets="KhamsinPrepareSources"
+          Condition="'$(KhamsinEmitCss)' == 'true' and '$(DesignTimeBuild)' != 'true'"
+          Inputs="$(IntermediateOutputPath)$(TargetFileName);$(_KhamsinSettingsPath);$(KhamsinConfigFullPath);@(_KhamsinSource);@(ReferencePath)"
+          Outputs="$(KhamsinCssOutputPath)">
+    <KhamsinEmitCss AssemblyPath="$(IntermediateOutputPath)$(TargetFileName)"
+                    ReferenceAssemblies="@(ReferencePathWithRefAssemblies)"
+                    SourceFiles="@(_KhamsinSource)"
+                    ProjectDirectory="$(MSBuildProjectDirectory)"
+                    ConfigPath="$(KhamsinConfigFullPath)"
+                    Minify="$(KhamsinMinify)"
+                    OutputPath="$(KhamsinCssOutputPath)">
+      <Output TaskParameter="CssFile" PropertyName="KhamsinCssFile" />
+    </KhamsinEmitCss>
+  </Target>
+
+  <Target Name="KhamsinCopyCssToOutput"
+          AfterTargets="KhamsinGenerateCss"
+          Condition="'$(KhamsinEmitCss)' == 'true' and Exists('$(KhamsinCssOutputPath)')">
+    <Copy SourceFiles="$(KhamsinCssOutputPath)"
+          DestinationFolder="$(OutDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <!--
+    Static web assets are discovered before CoreCompile, so the generated file is registered in the
+    post-compile manifest pass instead of the wwwroot discovery pass.
+  -->
+  <Target Name="KhamsinAddStaticWebAsset"
+          AfterTargets="KhamsinGenerateCss"
+          BeforeTargets="ResolveBuildStaticWebAssets"
+          Condition="'$(KhamsinEmitCss)' == 'true' and '$(KhamsinRegisterStaticWebAsset)' == 'true' and '$(UsingMicrosoftNETSdkWeb)' == 'true' and Exists('$(KhamsinCssOutputPath)')">
+    <ItemGroup>
+      <_KhamsinCssCandidate Include="$(KhamsinCssOutputPath)" RelativePath="$(KhamsinCssFileName)" />
+    </ItemGroup>
+
+    <DefineStaticWebAssets CandidateAssets="@(_KhamsinCssCandidate)"
+                           FingerprintCandidates="false"
+                           RelativePathPattern="$(KhamsinCssFileName)"
+                           SourceType="Discovered"
+                           SourceId="$(AssemblyName)"
+                           ContentRoot="$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)'))"
+                           BasePath="/">
+      <Output TaskParameter="Assets" ItemName="_KhamsinCssAsset" />
+    </DefineStaticWebAssets>
+
+    <ItemGroup>
+      <StaticWebAsset Include="@(_KhamsinCssAsset)" />
+      <ContentWithTargetPath Include="$(KhamsinCssOutputPath)"
+                             TargetPath="wwwroot/$(KhamsinCssFileName)"
+                             CopyToOutputDirectory="PreserveNewest"
+                             CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+</Project>

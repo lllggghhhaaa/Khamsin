@@ -1,0 +1,150 @@
+@page "/api"
+@rendermode InteractiveServer
+
+<PageTitle>C# API &middot; Khamsin sample</PageTitle>
+
+<div class="mb-8">
+    <h1 class="text-2xl font-bold text-ink-900">C# API playground</h1>
+    <p class="mt-1 text-sm text-ink-500">
+        KhamsinClass, the + operator, Merge, Join, Kx.When and Kx.Variant &mdash; every class below was
+        extracted from a C# or Razor literal at build time; only the selection happens here at runtime.
+    </p>
+</div>
+
+<DemoSection Title="Classes declared in plain C#" Note="Fields and helpers from Usages.cs in the app project.">
+    <div class="flex flex-wrap items-center gap-3">
+        <span class="@CSharpExamples.AccentBox.Value">CSharpExamples.AccentBox</span>
+        @foreach (var severity in Enum.GetValues<Severity>())
+        {
+            <span class="@CSharpExamples.StatusClasses(severity).Value rounded-full px-3 py-1 text-xs font-medium">@severity</span>
+        }
+    </div>
+    <div class="rounded-lg border p-4 text-sm @CSharpExamples.Toggle(ToggleOn).Value">
+        CSharpExamples.Toggle(@ToggleOn.ToString().ToLowerInvariant())
+    </div>
+    <p class="text-xs text-ink-500">
+        KhamsinClass.Merge("p-4 rounded-lg", "p-8 rounded-full") = <code class="rounded bg-ink-100 px-1 py-0.5 font-mono">@CSharpExamples.MergeDemo()</code>
+    </p>
+</DemoSection>
+
+<DemoSection Title="Live conflict resolution" Note="Toggle overrides against the card defaults. The merge removes conflicting groups; watch padding and the px case.">
+    <div class="flex flex-wrap gap-4 text-sm">
+        <label class="flex items-center gap-2">
+            <input type="checkbox" @bind="OverridePad" class="size-4 accent-ocean-600" />
+            override <code class="rounded bg-ink-100 px-1 py-0.5 font-mono">p-8</code> (replaces p-4)
+        </label>
+        <label class="flex items-center gap-2">
+            <input type="checkbox" @bind="OverridePadX" class="size-4 accent-ocean-600" />
+            add <code class="rounded bg-ink-100 px-1 py-0.5 font-mono">px-6</code> (refines p-4 horizontally)
+        </label>
+        <label class="flex items-center gap-2">
+            <input type="checkbox" @bind="OverrideRadius" class="size-4 accent-ocean-600" />
+            override <code class="rounded bg-ink-100 px-1 py-0.5 font-mono">rounded-full</code>
+        </label>
+        <label class="flex items-center gap-2">
+            <input type="checkbox" @bind="OverrideColor" class="size-4 accent-ocean-600" />
+            override <code class="rounded bg-ink-100 px-1 py-0.5 font-mono">bg-forest-100</code>
+        </label>
+        <label class="flex items-center gap-2">
+            <input type="checkbox" @bind="OverrideSemanticColor" class="size-4 accent-ocean-600" />
+            override <code class="rounded bg-ink-100 px-1 py-0.5 font-mono">bg-primary</code> (configured token; proves the runtime merge knows it)
+        </label>
+        <label class="flex items-center gap-2">
+            <input type="checkbox" @bind="OverrideHover" class="size-4 accent-ocean-600" />
+            add <code class="rounded bg-ink-100 px-1 py-0.5 font-mono">hover:bg-ocean-200</code> (different variant, always survives)
+        </label>
+    </div>
+    <div class="rounded-lg border border-ink-200 bg-ink-50 p-3">
+        <p class="font-mono text-xs break-all text-ink-600">@Merged.Value</p>
+    </div>
+    <div class="@Merged.Value max-w-md cursor-pointer transition-colors">
+        Preview of the merged class list &mdash; toggle the checkboxes above and watch this box.
+    </div>
+</DemoSection>
+
+<DemoSection Title="Cn composition" Note="The clsx-style composer: strings, booleans, condition tuples and nested collections, resolved through the same merger.">
+    <div class="flex flex-wrap items-center gap-3 text-sm">
+        <label class="flex items-center gap-2">
+            <input type="checkbox" @bind="CnCondensed" class="size-4 accent-ocean-600" />
+            condensed
+        </label>
+        <label class="flex items-center gap-2">
+            <input type="checkbox" @bind="CnAccent" class="size-4 accent-ocean-600" />
+            accent
+        </label>
+    </div>
+    <div class="@CnDemo.Value max-w-md cursor-pointer rounded-lg border border-ink-300 bg-white transition-colors">
+        class="rounded-lg border border-ink-300 bg-white + p-2/p-8 + conditional token + font-medium" &mdash; conflicts resolved, bg-white survives (different group).
+    </div>
+    <p class="text-xs text-ink-500">
+        <code class="rounded bg-ink-100 px-1 py-0.5 font-mono break-all">@CnDemo.Value</code>
+    </p>
+</DemoSection>
+
+<DemoSection Title="Operator and helper reference" Note="Everything the struct offers, with its live output.">
+    <div class="space-y-2 text-sm">
+        <p><code class="rounded bg-ink-100 px-1 py-0.5 font-mono">a + b</code> &rarr; <code class="rounded bg-ink-100 px-1 py-0.5 font-mono break-all">@(PlusDemo.Value)</code></p>
+        <p><code class="rounded bg-ink-100 px-1 py-0.5 font-mono">Join(a, b, c)</code> &rarr; <code class="rounded bg-ink-100 px-1 py-0.5 font-mono break-all">@(JoinedDemo.Value)</code></p>
+        <p><code class="rounded bg-ink-100 px-1 py-0.5 font-mono">a == b</code> &rarr; <code class="rounded bg-ink-100 px-1 py-0.5 font-mono">@(EqualDemo ? "true" : "false")</code></p>
+        <p><code class="rounded bg-ink-100 px-1 py-0.5 font-mono">KhamsinClass.Empty.IsEmpty</code> &rarr; <code class="rounded bg-ink-100 px-1 py-0.5 font-mono">@KhamsinClass.Empty.IsEmpty</code></p>
+        <p>
+            <code class="rounded bg-ink-100 px-1 py-0.5 font-mono">Kx.When(WidthToggle, "w-1/2", "w-full")</code>
+            <button type="button" @onclick="@(() => WidthToggle = !WidthToggle)" class="ml-2 rounded bg-ink-900 px-3 py-1 text-xs text-white hover:bg-ink-700">toggle</button>
+            &rarr; current: <code class="rounded bg-ink-100 px-1 py-0.5 font-mono">@WidthToggleClass.Value</code>
+        </p>
+        <div class="@WidthToggleClass.Value h-6 rounded bg-amber-300 transition-all"></div>
+    </div>
+</DemoSection>
+
+@code {
+    private static readonly KhamsinClass CardDefaults = "rounded-lg border border-ink-300 bg-white p-4 shadow-sm text-ink-900";
+    private static readonly KhamsinClass PadOverride = "p-8";
+    private static readonly KhamsinClass PadXOverride = "px-6";
+    private static readonly KhamsinClass RadiusOverride = "rounded-full";
+    private static readonly KhamsinClass ColorOverride = "bg-forest-100";
+    private static readonly KhamsinClass SemanticColorOverride = "bg-primary";
+    private static readonly KhamsinClass HoverOverride = "hover:bg-ocean-200";
+
+    private static readonly KhamsinClass MergeA = "p-4 text-sm";
+    private static readonly KhamsinClass MergeB = "p-8 text-lg";
+    private static readonly KhamsinClass ShadowExtra = "shadow-md";
+
+    private static readonly KhamsinClass EqualX = "flex items-center gap-2";
+    private static readonly KhamsinClass EqualY = "flex items-center gap-2";
+
+    private bool OverridePad { get; set; } = true;
+    private bool CnCondensed { get; set; }
+    private bool CnAccent { get; set; } = true;
+
+    private KhamsinClass CnDemo => Cn.Of(
+        "p-4 text-sm",
+        (CnCondensed, "p-2", "p-8"),
+        (CnAccent, "border-s-2 border-s-primary font-medium"));
+    private bool OverridePadX { get; set; }
+    private bool OverrideRadius { get; set; }
+    private bool OverrideColor { get; set; } = true;
+    private bool OverrideSemanticColor { get; set; } = true;
+    private bool OverrideHover { get; set; } = true;
+    private bool ToggleOn { get; set; } = true;
+    private bool WidthToggle { get; set; }
+
+    private KhamsinClass Merged
+    {
+        get
+        {
+            var overrides = KhamsinClass.Join(
+                OverridePad ? PadOverride : KhamsinClass.Empty,
+                OverridePadX ? PadXOverride : KhamsinClass.Empty,
+                OverrideRadius ? RadiusOverride : KhamsinClass.Empty,
+                OverrideColor ? ColorOverride : KhamsinClass.Empty,
+                OverrideSemanticColor ? SemanticColorOverride : KhamsinClass.Empty,
+                OverrideHover ? HoverOverride : KhamsinClass.Empty);
+            return KhamsinClass.Merge(CardDefaults, overrides);
+        }
+    }
+
+    private KhamsinClass PlusDemo => MergeA + MergeB;
+    private KhamsinClass JoinedDemo => KhamsinClass.Join(MergeA, MergeB, ShadowExtra);
+    private static bool EqualDemo => EqualX == EqualY;
+    private KhamsinClass WidthToggleClass => Kx.When(WidthToggle, "w-1/2", "w-full");
+}

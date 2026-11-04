@@ -1,0 +1,158 @@
+@page "/variants"
+@rendermode InteractiveServer
+
+<PageTitle>Variants &middot; Khamsin sample</PageTitle>
+
+<div class="mb-8">
+    <h1 class="text-2xl font-bold text-ink-900">Variants</h1>
+    <p class="mt-1 text-sm text-ink-500">
+        Pseudo-classes, pseudo-elements, group and peer, has/data/aria attributes, arbitrary selectors
+        and at-rules, the dark strategy, rtl/ltr and the important modifier.
+    </p>
+</div>
+
+<DemoSection Title="Pseudo-classes" Note="hover, focus, active, focus-visible, focus-within and disabled.">
+    <div class="flex flex-wrap items-center gap-3">
+        <button type="button" class="rounded-md bg-ocean-600 px-4 py-2 text-sm text-white hover:bg-ocean-800">hover:bg-ocean-800</button>
+        <button type="button" class="rounded-md bg-forest-600 px-4 py-2 text-sm text-white focus:bg-amber-300 focus:text-ink-900">focus:bg-amber-300</button>
+        <button type="button" class="rounded-md bg-violet-600 px-4 py-2 text-sm text-white active:scale-95 active:bg-violet-800">active:scale-95</button>
+        <button type="button" class="rounded-md bg-ink-100 px-4 py-2 text-sm text-ink-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember-600">focus-visible:outline</button>
+        <button type="button" disabled class="rounded-md bg-teal-600 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-40">disabled:opacity-40</button>
+    </div>
+    <div class="flex items-center gap-2 rounded-lg border border-ink-200 p-3 focus-within:border-ocean-500 focus-within:bg-ocean-50">
+        <label class="text-sm" for="variants-focus-within">focus-within:</label>
+        <input id="variants-focus-within" class="rounded border border-ink-300 px-2 py-1 text-sm" placeholder="focus this input" />
+    </div>
+</DemoSection>
+
+<DemoSection Title="Checked and first/last/odd/even" Note="checked styles the control; structural variants style list children.">
+    <label class="flex items-center gap-3 text-sm">
+        <input type="checkbox" class="size-5 rounded border-2 border-ink-300 accent-teal-600 checked:scale-110" />
+        checked:scale-110 on the checkbox itself
+    </label>
+    <ul class="rounded-lg border border-ink-200 text-sm">
+        <li class="p-2 first:rounded-t-lg first:bg-ocean-100">first:bg-ocean-100</li>
+        <li class="p-2 odd:bg-ink-50">odd:bg-ink-50</li>
+        <li class="p-2 odd:bg-ink-50">odd:bg-ink-50</li>
+        <li class="p-2 even:bg-teal-50">even:bg-teal-50</li>
+        <li class="p-2 last:rounded-b-lg last:bg-ember-100">last:bg-ember-100</li>
+    </ul>
+</DemoSection>
+
+<DemoSection Title="Named groups and peers" Note="group/name sentinels keep nested groups independent: group-hover/card only reacts to its own card.">
+    <div class="flex flex-wrap gap-4">
+        <div class="group/card rounded-lg border border-ink-200 p-4">
+            <p class="text-sm text-ink-600 group-hover/card:text-ocean-700">card &mdash; hover me: <span class="font-semibold">group-hover/card</span></p>
+            <div class="group/inner mt-2 rounded bg-ink-50 p-2">
+                <span class="text-xs text-ink-500 group-hover/inner:text-forest-700">inner group-hover/inner (independent)</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <input type="checkbox" class="peer/dialog size-5 accent-forest-600" />
+            <span class="text-sm text-ink-500 peer-checked/dialog:font-semibold peer-checked/dialog:text-forest-700">peer-checked/dialog</span>
+        </div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Unnamed group and peer" Note="group-* styles descendants of .group; peer-* styles siblings after .peer.">
+    <div class="group rounded-lg border border-ink-200 p-4 transition hover:border-ocean-400">
+        <p class="text-sm text-ink-600 group-hover:text-ocean-700 group-hover:font-semibold">group-hover:text-ocean-700 &mdash; hover anywhere on this card</p>
+        <span class="mt-2 inline-block rounded bg-ink-100 px-2 py-0.5 text-xs text-ink-500 group-focus-within:bg-amber-200 group-focus-within:text-ink-900">group-focus-within:bg-amber-200</span>
+    </div>
+    <div class="flex items-center gap-3">
+        <input type="checkbox" class="peer size-5 accent-forest-600" />
+        <span class="text-sm text-ink-500 peer-checked:font-semibold peer-checked:text-forest-700">peer-checked styling</span>
+    </div>
+    <div class="flex items-center gap-3">
+        <input type="text" class="peer rounded border border-ink-300 px-2 py-1 text-sm" placeholder="type, then look right" />
+        <span class="text-xs text-ember-700 peer-focus-visible:text-ocean-700 peer-focus-visible:font-semibold">peer-focus-visible hint</span>
+    </div>
+</DemoSection>
+
+<DemoSection Title="has-, data- and aria- variants" Note="Dynamic attribute variants compile to real selectors; the state here is set in markup.">
+    <label class="block has-[:checked]:border-forest-500 has-[:checked]:bg-forest-50 cursor-pointer rounded-lg border border-ink-200 p-3 text-sm">
+        <input type="checkbox" class="mr-2 accent-forest-600" />
+        has-[:checked]:border-forest-500 has-[:checked]:bg-forest-50
+    </label>
+    <div class="flex flex-wrap gap-3">
+        <div data-state="open" class="rounded-lg bg-ink-50 p-3 text-xs data-[state=open]:bg-forest-100 data-[state=open]:text-forest-900">data-state=open</div>
+        <div data-state="closed" class="rounded-lg bg-ink-50 p-3 text-xs data-[state=open]:bg-forest-100 data-[state=open]:text-forest-900">data-state=closed</div>
+        <div aria-sort="ascending" class="rounded-lg bg-ink-50 p-3 text-xs aria-[sort=ascending]:text-ocean-700">aria-sort=ascending</div>
+        <div aria-disabled="true" class="rounded-lg bg-ink-50 p-3 text-xs aria-[disabled=true]:text-ember-700">aria-disabled=true</div>
+    </div>
+    <div class="group rounded-lg border border-ink-200 p-3 text-sm" data-loading="true">
+        <span class="text-ink-500 group-data-[loading=true]:text-amber-700">group-data-[loading=true]:text-amber-700 (parent carries .group + data-loading)</span>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Dark strategy" Note="dark: compiles to descendant selectors of the configured dark prefix; khamsin.json sets it to .theme-dark here.">
+    <div class="flex items-center gap-3">
+        <button type="button" @onclick="@(() => DarkPreview = !DarkPreview)"
+                class="rounded-md bg-ink-900 px-4 py-2 text-sm text-white hover:bg-ink-700">
+            @(DarkPreview ? "Switch to light preview" : "Switch to dark preview")
+        </button>
+        <span class="text-xs text-ink-500">wrapper gets the .theme-dark class</span>
+    </div>
+    <div class="@(DarkPreview ? "theme-dark" : string.Empty)">
+        <div class="rounded-lg border border-ink-200 bg-white p-4 text-ink-900 dark:border-ink-700 dark:bg-ink-900 dark:text-ink-100 transition-colors">
+            <p class="font-semibold">Themed panel</p>
+            <p class="mt-1 text-sm text-ink-600 dark:text-ink-300">
+                bg-white / text-ink-600 become dark:bg-ink-900 / dark:text-ink-300 under the .theme-dark ancestor;
+                the configured primary and muted tokens flip with it too.
+            </p>
+            <Badge Text="dark: variant" Khamsin="@("dark:bg-teal-900 dark:text-teal-200")" />
+        </div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Arbitrary selectors and at-rules" Note="Bracket selector variants plus media and container at-rule wrappers; the at-classes come from C# because Razor would read the at-sign as an expression.">
+    <ul class="rounded-lg border border-ink-200 p-3 text-sm [&>li]:mt-1 [&>li]:rounded [&>li]:bg-sand-100 [&>li]:px-2">
+        <li>[&>li]:mt-1 [&>li]:bg-sand-100</li>
+        <li>second list item</li>
+        <li>third list item</li>
+    </ul>
+    <div class="rounded-lg border border-ink-200 p-3">
+        <span class="hidden text-sm text-forest-700 @CSharpExamples.ArbitraryVariants.LargeScreensOnly.Value">
+            [@@media(min-width:64rem)]:inline &mdash; visible only when the viewport is at least lg.
+        </span>
+        <span class="inline text-sm text-ember-700 @CSharpExamples.ArbitraryVariants.SmallScreensOnly.Value">
+            Narrower than 64rem right now.
+        </span>
+    </div>
+    <div class="[container-type:inline-size] rounded-lg border border-dashed border-ink-300 p-3">
+        <div class="grid grid-cols-1 gap-2 @CSharpExamples.ArbitraryVariants.ContainerThreeCols.Value">
+            <div class="rounded bg-teal-100 p-2 text-xs">container</div>
+            <div class="rounded bg-teal-100 p-2 text-xs">query</div>
+            <div class="rounded bg-teal-100 p-2 text-xs">28rem</div>
+        </div>
+        <p class="mt-2 text-xs text-ink-500">[@@container(min-width:28rem)]:grid-cols-3 against [container-type:inline-size] on the dashed box.</p>
+    </div>
+</DemoSection>
+
+<DemoSection Title="v4 negation, attribute and positional variants" Note="not-* inverts states, data-open is the bracketless attribute form, nth-3 targets positions.">
+    <p class="text-sm text-ink-600 not-hover:text-ocean-700">not-hover:text-ocean-700 &mdash; blue ONLY while you are NOT hovering.</p>
+    <div data-open class="rounded-lg bg-ink-50 p-3 text-sm data-open:text-forest-700">data-open:text-forest-700 (attribute shorthand)</div>
+    <div class="rounded-lg border border-ink-200 p-3 text-sm [&>p]:mt-1">
+        <p class="nth-1:text-ember-700">nth-1:text-ember-700</p>
+        <p class="nth-2:text-ocean-700">nth-2:text-ocean-700</p>
+        <p class="nth-3:text-forest-700">nth-3:text-forest-700</p>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Direction variants and important" Note="rtl:/ltr: react to the dir attribute; ! promotes a utility over later conflicts.">
+    <div dir="ltr" class="flex gap-2 rounded-lg border border-ink-200 p-3">
+        <span class="rounded bg-ocean-100 px-2 py-1 text-xs rtl:bg-amber-200 ltr:bg-ocean-200">ltr:bg-ocean-200</span>
+        <span class="rounded bg-ink-100 px-2 py-1 text-xs rtl:flex-row-reverse">dir=ltr</span>
+    </div>
+    <div dir="rtl" class="flex gap-2 rounded-lg border border-ink-200 p-3">
+        <span class="rounded bg-amber-200 px-2 py-1 text-xs ltr:bg-ocean-200 rtl:bg-amber-400">rtl:bg-amber-400</span>
+        <span class="rounded bg-ink-100 px-2 py-1 text-xs ltr:flex-row-reverse rtl:flex-row-reverse">dir=rtl reverses</span>
+    </div>
+    <div class="rounded-lg border border-ink-200 p-3">
+        <p class="text-sm text-ink-500 !text-ember-700">!text-ember-700 beats the unimportant text-ink-500 declared before it.</p>
+    </div>
+</DemoSection>
+
+@code {
+    private bool DarkPreview { get; set; }
+}

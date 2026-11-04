@@ -1,0 +1,105 @@
+@page "/"
+
+<PageTitle>Khamsin sample</PageTitle>
+
+<div class="space-y-10">
+    <section class="rounded-2xl bg-gradient-to-br from-ocean-700 via-ocean-800 to-forest-900 p-8 text-white shadow-lg sm:p-10">
+        <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Khamsin</h1>
+        <p class="mt-2 max-w-2xl text-ocean-100">
+            Build-time utility CSS for Blazor. Classes are extracted from literals at compile time and
+            emitted as a single tree-shaken stylesheet; the runtime only merges classes with conflict
+            resolution. This app exercises every part of that pipeline.
+        </p>
+        <div class="mt-6 flex flex-wrap items-center gap-3">
+            <PrimaryButton>Default button</PrimaryButton>
+            <PrimaryButton Khamsin="@("px-6 bg-forest-600 hover:bg-forest-700 active:bg-forest-800")">Overridden</PrimaryButton>
+            <PrimaryButton Khamsin="@Kx.When(IsPublishEnabled, "bg-forest-600 hover:bg-forest-700", "bg-ember-600 hover:bg-ember-700")">Publish</PrimaryButton>
+        </div>
+    </section>
+
+    <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <a class="no-underline group rounded-xl border border-ink-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" href="/layout">
+            <h2 class="font-semibold text-ink-900 group-hover:text-ocean-700">Layout, spacing, sizing</h2>
+            <p class="mt-1 text-sm text-ink-500">Flex, grid, position, overflow, padding, margin, fractions, arbitrary values and CSS variables.</p>
+        </a>
+        <a class="no-underline group rounded-xl border border-ink-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" href="/typography">
+            <h2 class="font-semibold text-ink-900 group-hover:text-ocean-700">Typography</h2>
+            <p class="mt-1 text-sm text-ink-500">Sizes, weights, families, leading, tracking, decoration, clamping and text wrapping.</p>
+        </a>
+        <a class="no-underline group rounded-xl border border-ink-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" href="/colors">
+            <h2 class="font-semibold text-ink-900 group-hover:text-ocean-700">Colors and backgrounds</h2>
+            <p class="mt-1 text-sm text-ink-500">The full palette, opacity modifiers, arbitrary colors, fill, stroke, accent and caret.</p>
+        </a>
+        <a class="no-underline group rounded-xl border border-ink-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" href="/borders">
+            <h2 class="font-semibold text-ink-900 group-hover:text-ocean-700">Borders and effects</h2>
+            <p class="mt-1 text-sm text-ink-500">Widths, styles, radii, dividers, shadows, rings and outlines.</p>
+        </a>
+        <a class="no-underline group rounded-xl border border-ink-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" href="/motion">
+            <h2 class="font-semibold text-ink-900 group-hover:text-ocean-700">Motion and interactivity</h2>
+            <p class="mt-1 text-sm text-ink-500">Transforms, transitions, cursors, selection, resize and appearance.</p>
+        </a>
+        <a class="no-underline group rounded-xl border border-ink-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" href="/variants">
+            <h2 class="font-semibold text-ink-900 group-hover:text-ocean-700">Variants</h2>
+            <p class="mt-1 text-sm text-ink-500">Pseudo-classes, pseudo-elements, group/peer, has/data/aria, dark mode and arbitrary selectors.</p>
+        </a>
+        <a class="no-underline group rounded-xl border border-ink-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" href="/responsive">
+            <h2 class="font-semibold text-ink-900 group-hover:text-ocean-700">Responsive and media</h2>
+            <p class="mt-1 text-sm text-ink-500">Breakpoints, max-width variants, print, motion preference and container queries.</p>
+        </a>
+        <a class="no-underline group rounded-xl border border-ink-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" href="/api">
+            <h2 class="font-semibold text-ink-900 group-hover:text-ocean-700">C# API playground</h2>
+            <p class="mt-1 text-sm text-ink-500">KhamsinClass, the + operator, Merge, Join, Kx.When and Kx.Variant, live.</p>
+        </a>
+        <a class="no-underline group rounded-xl border border-ink-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" href="/pipeline">
+            <h2 class="font-semibold text-ink-900 group-hover:text-ocean-700">Build pipeline checks</h2>
+            <p class="mt-1 text-sm text-ink-500">Live verification: extraction, manifests, tree shaking and the CSS endpoint.</p>
+        </a>
+    </section>
+
+    <section class="rounded-xl border border-ink-200 bg-white p-6 shadow-sm">
+        <h2 class="text-lg font-semibold text-ink-900">Configured theme tokens</h2>
+        <p class="mt-1 text-sm text-ink-500">
+            khamsin.json extends the theme: <code class="rounded bg-ink-100 px-1 py-0.5 text-xs">primary</code> and
+            <code class="rounded bg-ink-100 px-1 py-0.5 text-xs">muted</code> resolve to CSS variables that
+            <code class="rounded bg-ink-100 px-1 py-0.5 text-xs">.theme-dark</code> flips, plus a display font, a card
+            radius and a 3xl breakpoint. Toggle dark on the variants page to watch the same classes re-theme.
+        </p>
+        <div class="mt-4 flex flex-wrap items-center gap-3">
+            <span class="rounded-card bg-primary px-4 py-2 font-display text-sm font-medium text-primary-foreground">bg-primary text-primary-foreground</span>
+            <span class="rounded-lg bg-muted px-4 py-2 text-sm text-muted-foreground">bg-muted text-muted-foreground</span>
+            <span class="hidden text-xs text-ink-400 3xl:inline">3xl:inline &mdash; only past the configured 112rem breakpoint</span>
+        </div>
+    </section>
+
+    <section class="grid gap-4 lg:grid-cols-2">
+        <Card Title="Runtime merging" Khamsin="@("p-6")">
+            <p>
+                The card's defaults say <code class="rounded bg-ink-100 px-1 py-0.5 text-xs">p-4</code>;
+                the consumer passed <code class="rounded bg-ink-100 px-1 py-0.5 text-xs">p-6</code>.
+                The merge removes the conflicting padding: later wins, and a group
+                (<code class="rounded bg-ink-100 px-1 py-0.5 text-xs">p</code>) shadows its children
+                (<code class="rounded bg-ink-100 px-1 py-0.5 text-xs">px</code>, <code class="rounded bg-ink-100 px-1 py-0.5 text-xs">py</code>).
+            </p>
+            <PrimaryButton>Rendered inside the card</PrimaryButton>
+        </Card>
+
+        <Card Title="Library tree shaking" Khamsin="@("p-6")">
+            <p>
+                <code class="rounded bg-ink-100 px-1 py-0.5 text-xs">PrimaryButton</code>,
+                <code class="rounded bg-ink-100 px-1 py-0.5 text-xs">Card</code> and
+                <code class="rounded bg-ink-100 px-1 py-0.5 text-xs">Badge</code> are library components;
+                their styles are included because they are rendered. The library also contains an unused
+                panel whose classes never reach the stylesheet &mdash; verified on the
+                <a class="text-ocean-600 underline" href="/pipeline">pipeline page</a>.
+            </p>
+            <div class="flex flex-wrap gap-2">
+                <Badge Text="tree-shaken" />
+                <Badge Text="build-time" Khamsin="@("bg-amber-100 text-amber-800")" />
+            </div>
+        </Card>
+    </section>
+</div>
+
+@code {
+    private static readonly bool IsPublishEnabled = true;
+}

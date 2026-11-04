@@ -1,0 +1,100 @@
+@page "/spacing"
+
+<PageTitle>Spacing &middot; Khamsin sample</PageTitle>
+
+<div class="mb-8">
+    <h1 class="text-2xl font-bold text-ink-900">Spacing and sizing</h1>
+    <p class="mt-1 text-sm text-ink-500">
+        Padding, margin, gaps, width, height, fractions, keywords, negative values, arbitrary values
+        and CSS-variable-driven values on a 0.25rem scale.
+    </p>
+</div>
+
+<DemoSection Title="Padding" Note="p, px, py, pt, pr, pb, pl across the scale.">
+    <div class="flex flex-wrap gap-2">
+        <div class="rounded bg-ocean-100 p-2 text-xs">p-2</div>
+        <div class="rounded bg-ocean-100 p-4 text-xs">p-4</div>
+        <div class="rounded bg-ocean-100 p-8 text-xs">p-8</div>
+        <div class="rounded bg-forest-100 px-6 py-2 text-xs">px-6 py-2</div>
+        <div class="rounded bg-amber-100 pt-6 pb-1 pl-4 pr-2 text-xs">pt-6 pb-1 pl-4 pr-2</div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Margin, auto centering and negative margins" Note="m, mx, my, mt..., mx-auto and negative values pull elements outward.">
+    <div class="rounded-lg border border-ink-200 p-3">
+        <div class="mx-auto w-fit rounded bg-teal-100 px-3 py-1 text-xs">mx-auto w-fit</div>
+    </div>
+    <div class="rounded-lg border border-ink-200 p-3">
+        <div class="-mt-1 -ml-1 rounded bg-teal-100 px-3 py-1 text-xs">-mt-1 -ml-1</div>
+    </div>
+    <div class="rounded-lg border border-ink-200 p-3">
+        <div class="mb-0 rounded bg-teal-100 px-3 py-1 text-xs">normal</div>
+        <div class="mt-4 rounded bg-teal-100 px-3 py-1 text-xs">mt-4</div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="space-* and divide-*" Note="Both target &gt;*+* children: space adds margin, divide adds borders.">
+    <div class="space-y-2 rounded-lg border border-ink-200 p-3">
+        <div class="rounded bg-violet-100 px-3 py-1 text-xs">space-y-2 child 1</div>
+        <div class="rounded bg-violet-100 px-3 py-1 text-xs">space-y-2 child 2</div>
+        <div class="rounded bg-violet-100 px-3 py-1 text-xs">space-y-2 child 3</div>
+    </div>
+    <div class="divide-y divide-ink-200 rounded-lg border border-ink-200">
+        <div class="p-3 text-sm">divide-y row one</div>
+        <div class="p-3 text-sm">divide-y row two</div>
+        <div class="p-3 text-sm">divide-y row three</div>
+    </div>
+    <div class="flex divide-x divide-ember-300 rounded-lg border border-ink-200">
+        <div class="flex-1 p-3 text-sm">divide-x</div>
+        <div class="flex-1 p-3 text-sm">with</div>
+        <div class="flex-1 p-3 text-sm">divide-ember-300</div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Gap" Note="gap, gap-x and gap-y for flex and grid containers.">
+    <div class="flex flex-wrap gap-x-8 gap-y-2 rounded-lg border border-ink-200 p-3">
+        <span class="rounded bg-lime-100 px-2 py-1 text-xs">gap-x-8</span>
+        <span class="rounded bg-lime-100 px-2 py-1 text-xs">gap-y-2</span>
+        <span class="rounded bg-lime-100 px-2 py-1 text-xs">wraps</span>
+        <span class="rounded bg-lime-100 px-2 py-1 text-xs">here</span>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Width fractions and keywords" Note="Fractions of the parent, plus auto, full, screen, min, max and fit.">
+    <div class="space-y-1.5">
+        <div class="w-1/2 rounded bg-ocean-200 px-2 py-1 text-xs">w-1/2</div>
+        <div class="w-2/3 rounded bg-ocean-300 px-2 py-1 text-xs">w-2/3</div>
+        <div class="w-full rounded bg-ocean-400 px-2 py-1 text-xs">w-full</div>
+        <div class="w-min rounded bg-ocean-100 px-2 py-1 text-xs">w-min</div>
+        <div class="w-fit rounded bg-ocean-100 px-2 py-1 text-xs">w-fit</div>
+    </div>
+    <div class="max-w-md rounded-lg border border-ink-200 p-3 text-xs text-ink-500">
+        max-w-md clamps this box to the 28rem container token.
+    </div>
+    <div class="grid gap-2 sm:grid-cols-3">
+        <div class="min-h-16 min-w-0 rounded bg-amber-100 p-2 text-xs">min-h-16 min-w-0</div>
+        <div class="max-h-10 overflow-hidden rounded bg-amber-100 p-2 text-xs">max-h-10 overflow-hidden clips filler text</div>
+        <div class="h-16 rounded bg-amber-100 p-2 text-xs">h-16</div>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Fixed sizes" Note="size-* sets width and height together.">
+    <div class="flex items-center gap-3">
+        <div class="size-8 rounded bg-ember-300"></div>
+        <div class="size-12 rounded bg-ember-400"></div>
+        <div class="size-16 rounded bg-ember-500"></div>
+        <span class="text-xs text-ink-500">size-8 / size-12 / size-16</span>
+    </div>
+</DemoSection>
+
+<DemoSection Title="Arbitrary values and CSS variables" Note="Bracket values are literal CSS; parentheses reference a custom property.">
+    <div class="space-y-2">
+        <div class="w-[280px] rounded bg-violet-200 px-2 py-1 text-xs">w-[280px]</div>
+        <div class="w-(--panel) rounded bg-violet-300 px-2 py-1 text-xs" style="--panel: 12rem;">w-(--panel) with --panel: 12rem</div>
+        <div class="gap-4 [column-gap:2.5rem] rounded-lg border border-ink-200 p-3 text-xs text-ink-500 [margin-block:1.5rem]">
+            Arbitrary properties: [column-gap:2.5rem], [margin-block:1.5rem]
+        </div>
+        <div class="[--swatch:#58cac3] size-10 rounded-lg bg-(--swatch)"></div>
+        <p class="text-xs text-ink-500">[--swatch:#58cac3] feeds bg-(--swatch).</p>
+    </div>
+</DemoSection>

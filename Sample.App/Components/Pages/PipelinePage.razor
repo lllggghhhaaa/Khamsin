@@ -1,0 +1,206 @@
+@page "/pipeline"
+@using System.Net.Http.Headers
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Pipeline &middot; Khamsin sample</PageTitle>
+
+<div class="mb-8">
+    <h1 class="text-2xl font-bold text-ink-900">Build pipeline checks</h1>
+    <p class="mt-1 text-sm text-ink-500">
+        Live verification that the generated stylesheet contains what it must and nothing it should not:
+        every extraction source, arbitrary values, tree shaking and the endpoint fallback.
+    </p>
+</div>
+
+<DemoSection Title="Extraction sources" Note="Each selector below comes from a different literal form.">
+    <ul class="space-y-1 text-sm">
+        @foreach (var check in ExtractionChecks)
+        {
+            <li class="flex items-center gap-2">
+                <span class="@StatusClasses(check.Passed) rounded-full px-2 py-0.5 text-xs font-medium">@(check.Passed ? "pass" : "FAIL")</span>
+                <span class="text-ink-700">@check.Label</span>
+                <code class="rounded bg-ink-100 px-1 py-0.5 font-mono text-xs text-ink-500">@check.Selector</code>
+            </li>
+        }
+    </ul>
+</DemoSection>
+
+<DemoSection Title="Configured theme" Note="khamsin.json tokens: colors from CSS variables, a display font, a radius token and a custom 3xl breakpoint.">
+    <ul class="space-y-1 text-sm">
+        @foreach (var check in ConfigChecks)
+        {
+            <li class="flex items-center gap-2">
+                <span class="@StatusClasses(check.Passed) rounded-full px-2 py-0.5 text-xs font-medium">@(check.Passed ? "pass" : "FAIL")</span>
+                <span class="text-ink-700">@check.Label</span>
+                <code class="rounded bg-ink-100 px-1 py-0.5 font-mono text-xs text-ink-500">@check.Selector</code>
+            </li>
+        }
+    </ul>
+</DemoSection>
+
+<DemoSection Title="Effects" Note="Colored shadows, animations with tree-shaken keyframes, filter families and the backdrop variant.">
+    <ul class="space-y-1 text-sm">
+        @foreach (var check in EffectsChecks)
+        {
+            <li class="flex items-center gap-2">
+                <span class="@StatusClasses(check.Passed) rounded-full px-2 py-0.5 text-xs font-medium">@(check.Passed ? "pass" : "FAIL")</span>
+                <span class="text-ink-700">@check.Label</span>
+                <code class="rounded bg-ink-100 px-1 py-0.5 font-mono text-xs text-ink-500">@check.Selector</code>
+            </li>
+        }
+    </ul>
+</DemoSection>
+
+<DemoSection Title="Tree shaking" Note="Classes from rendered components must be in; classes from components nobody renders must be out.">
+    <ul class="space-y-1 text-sm">
+        @foreach (var check in TreeShakeChecks)
+        {
+            <li class="flex items-center gap-2">
+                <span class="@StatusClasses(check.Passed) rounded-full px-2 py-0.5 text-xs font-medium">@(check.Passed ? "pass" : "FAIL")</span>
+                <span class="text-ink-700">@check.Label</span>
+                <code class="rounded bg-ink-100 px-1 py-0.5 font-mono text-xs text-ink-500">@check.Selector</code>
+            </li>
+        }
+    </ul>
+</DemoSection>
+
+<DemoSection Title="Stylesheet delivery" Note="Static web assets and the MapKhamsinCss endpoint fallback, including ETag/304 round trip.">
+    <ul class="space-y-1 text-sm">
+        @foreach (var check in DeliveryChecks)
+        {
+            <li class="flex items-center gap-2">
+                <span class="@StatusClasses(check.Passed) rounded-full px-2 py-0.5 text-xs font-medium">@(check.Passed ? "pass" : "FAIL")</span>
+                <span class="text-ink-700">@check.Label</span>
+                <code class="rounded bg-ink-100 px-1 py-0.5 font-mono text-xs text-ink-500">@check.Selector</code>
+            </li>
+        }
+    </ul>
+    <p class="text-xs text-ink-500">
+        Stylesheet size: @CssSize bytes &middot; endpoint ETag: <code class="rounded bg-ink-100 px-1 py-0.5 font-mono">@EndpointEtag</code>
+    </p>
+</DemoSection>
+
+<DemoSection Title="Classes that only exist via the manifest" Note="Ring styles emitted because of the [KhamsinManifest] attribute on CSharpExamples, plus the runtime result.">
+    <div class="rounded-lg bg-violet-50 p-4 ring-8 ring-violet-300">
+        <p class="text-sm text-violet-900">bg-violet-50 + ring-8 ring-violet-300 &mdash; declared in Usages.cs as an attribute, rendered here.</p>
+    </div>
+</DemoSection>
+
+@code {
+    private IReadOnlyList<Check> ExtractionChecks { get; set; } = [];
+    private IReadOnlyList<Check> ConfigChecks { get; set; } = [];
+    private IReadOnlyList<Check> EffectsChecks { get; set; } = [];
+    private IReadOnlyList<Check> TreeShakeChecks { get; set; } = [];
+    private IReadOnlyList<Check> DeliveryChecks { get; set; } = [];
+    private int CssSize { get; set; }
+    private string EndpointEtag { get; set; } = "n/a";
+
+    private static KhamsinClass StatusClasses(bool passed) => Kx.When(passed, "bg-forest-100 text-forest-800", "bg-ember-100 text-ember-800");
+
+    protected override async Task OnInitializedAsync()
+    {
+        var client = HttpClientFactory.CreateClient();
+        client.BaseAddress = new Uri(Navigation.BaseUri);
+
+        var cssResponse = await client.GetAsync("khamsin.css");
+        var css = cssResponse.IsSuccessStatusCode ? await cssResponse.Content.ReadAsStringAsync() : string.Empty;
+        CssSize = css.Length;
+
+        var passed = new Func<string, bool>(needle => css.Contains(needle, StringComparison.Ordinal));
+
+        ExtractionChecks =
+        [
+            new("Razor class attribute (this page's own markup)", ".text-2xl", passed(".text-2xl{")),
+            new("Razor Khamsin=@(\"literal\") attribute", ".bg-forest-600", passed(".bg-forest-600{")),
+            new("Library component defaults (Sample.Lib Badge)", ".text-teal-800", passed(".text-teal-800{")),
+            new("C# KhamsinClass field initializer (Usages.cs)", ".bg-violet-600", passed(".bg-violet-600{")),
+            new("C# Kx.When branches (Usages.cs Toggle)", ".bg-forest-50", passed(".bg-forest-50{")),
+            new("C# Kx.Variant options (Usages.cs StatusClasses)", ".bg-amber-100", passed(".bg-amber-100{")),
+            new("Kx.When branches in Razor (@code)", ".bg-ember-600", passed(".bg-ember-600{")),
+            new("Manual [KhamsinManifest] attribute (Usages.cs)", ".ring-violet-300", passed(".ring-violet-300{")),
+            new("Arbitrary value (w-[280px] on /spacing)", ".w-\\[280px\\]", passed(".w-\\[280px\\]{")),
+            new("CSS-variable value (w-(--panel) on /)", "var(--panel)", passed("var(--panel)")),
+            new("Important modifier (!text-ember-700 on /variants)", ".\\!text-ember-700", passed(".\\!text-ember-700{")),
+            new("Variant chain (dark:bg-ink-900 via the configured .theme-dark prefix)", ".theme-dark .dark\\:bg-ink-900", passed(".theme-dark .dark\\:bg-ink-900{")),
+            new("Arbitrary selector ([&>li]:mt-1 on /variants)", ">li", passed(">li")),
+            new("Breakpoint variant (sm:bg-teal-200 on /responsive)", "@media (min-width: 40rem)", passed("(min-width: 40rem)")),
+        ];
+
+        ConfigChecks =
+        [
+            new("Config color token emitted (--color-primary)", "--color-primary:var(--primary)", passed("--color-primary:var(--primary)")),
+            new("Config color utility parses (bg-primary on /)", ".bg-primary", passed(".bg-primary{")),
+            new("Config shade utility (text-muted-foreground)", ".text-muted-foreground", passed(".text-muted-foreground{")),
+            new("Config font token (--font-display)", "--font-display:", passed("--font-display:")),
+            new("Config font utility (font-display on /)", ".font-display", passed(".font-display{")),
+            new("Config radius token (rounded-card on /)", ".rounded-card", passed(".rounded-card{")),
+            new("Config breakpoint variant (3xl:inline on /)", "(min-width: 112rem)", passed("(min-width: 112rem)")),
+        ];
+
+        EffectsChecks =
+        [
+            new("Colored shadow re-colors the token (shadow-primary/50 on /motion)", "shadow-primary\\/50", passed(".shadow-primary\\/50{")),
+            new("Colored shadow twin declares var(--khamsin-shadow-color)", "--khamsin-shadow-colored:0 4px 8px", passed("--khamsin-shadow-colored:0 4px 8px")),
+            new("Animation utility (animate-spin on /motion)", ".animate-spin{animation:spin", passed(".animate-spin{animation:spin")),
+            new("Keyframes emitted for used animations only", "@keyframes spin{to{transform:rotate(360deg)}}", passed("@keyframes spin{to{transform:rotate(360deg)}}")),
+            new("Enter animation composed on /motion", "khamsin-enter", passed("@keyframes khamsin-enter{")),
+            new("Exit keyframes absent without animate-out", "@keyframes khamsin-exit{", !passed("@keyframes khamsin-exit{")),
+            new("Filter family (blur-sm on /motion)", "--khamsin-blur:blur(4px)", passed("--khamsin-blur:blur(4px)")),
+            new("Backdrop filter (backdrop-blur-md on /motion)", "backdrop-filter:var(--khamsin-backdrop-blur,)", passed("backdrop-filter:var(--khamsin-backdrop-blur,)")),
+            new("backdrop: variant targets ::backdrop", "::backdrop", passed("::backdrop")),
+            new("Gradient stops compose (hero from/via/to)", "--khamsin-gradient-stops:…from-position…to-position", passed("--khamsin-gradient-via:var(--color-ocean-800)")),
+            new("Named group variant (group-hover/card on /variants)", ".group\\/card:hover", passed(".group\\/card:hover")),
+            new("Per-side border width (border-r-8 on /borders)", ".border-r-8{border-right-width:8px", passed(".border-r-8{border-right-width:8px")),
+            new("Numeric variant (tabular-nums on /typography)", ".tabular-nums{", passed(".tabular-nums{")),
+            new("Background image utility (bg-[url(…)] on /colors)", "background-image:url(", passed("background-image:url(")),
+            new("Background image via type hint (bg-[image:var(--tile)])", "background-image:var(--tile)", passed("background-image:var(--tile)")),
+        ];
+
+        TreeShakeChecks =
+        [
+            new("Rendered library button included", ".bg-ocean-600", passed(".bg-ocean-600{")),
+            new("Rendered library badge included", ".bg-teal-100", passed(".bg-teal-100{")),
+            new("UnusedPanel (never rendered) excluded", ".text-rose-700", !passed(".text-rose-700{")),
+            new("UnusedPanel border color excluded", ".border-rose-300", !passed(".border-rose-300{")),
+        ];
+
+        var etag = string.Empty;
+        if (cssResponse.IsSuccessStatusCode)
+        {
+            DeliveryChecks = [new("Static web asset /khamsin.css responds", cssResponse.StatusCode.ToString(), cssResponse.StatusCode == System.Net.HttpStatusCode.OK)];
+        }
+        else
+        {
+            DeliveryChecks = [new("Static web asset /khamsin.css responds", cssResponse.StatusCode.ToString(), false)];
+        }
+
+        var endpointResponse = await client.GetAsync("khamsin-endpoint.css");
+        etag = endpointResponse.Headers.ETag?.Tag ?? string.Empty;
+        EndpointEtag = etag;
+
+        var endpointOk = endpointResponse.StatusCode == System.Net.HttpStatusCode.OK
+            && (endpointResponse.Content.Headers.ContentType?.MediaType == "text/css");
+
+        var notModifiedStatus = System.Net.HttpStatusCode.NotModified;
+        var sawNotModified = false;
+        if (etag.Length > 0)
+        {
+            var conditional = new HttpRequestMessage(HttpMethod.Get, "khamsin-endpoint.css");
+            conditional.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag));
+            using var notModified = await client.SendAsync(conditional);
+            notModifiedStatus = notModified.StatusCode;
+            sawNotModified = notModified.StatusCode == System.Net.HttpStatusCode.NotModified;
+        }
+
+        var delivery = new List<Check>(DeliveryChecks)
+        {
+            new("MapKhamsinCss fallback responds with text/css", endpointResponse.StatusCode.ToString(), endpointOk),
+            new("Endpoint advertises an ETag", etag, etag.Length > 0),
+            new("Conditional GET returns 304 Not Modified", notModifiedStatus.ToString(), sawNotModified),
+        };
+        DeliveryChecks = delivery;
+    }
+
+    private sealed record Check(string Label, string Selector, bool Passed);
+}

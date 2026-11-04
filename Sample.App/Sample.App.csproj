@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Sample.App</RootNamespace>
+    <KhamsinEmitCss>true</KhamsinEmitCss>
+    <!-- Repo development: use the task built from source; the package sets this to tasks/... -->
+    <KhamsinTaskAssembly Condition="'$(MSBuildRuntimeType)' == 'Core'">$(MSBuildThisFileDirectory)../Khamsin.Build/bin/$(Configuration)/net8.0/Khamsin.Build.dll</KhamsinTaskAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- ProjectReference analyzers do not flow their dependencies; the package ships Core next to the
+         generator and MSBuild adds both as analyzers. Mirror that for repo development. -->
+    <Analyzer Include="$(MSBuildThisFileDirectory)../Khamsin.Core/bin/$(Configuration)/netstandard2.0/Khamsin.Core.dll" />
+    <ProjectReference Include="../Khamsin.Blazor/Khamsin.Blazor.csproj" />
+    <ProjectReference Include="../Khamsin.Core/Khamsin.Core.csproj" />
+    <ProjectReference Include="../Khamsin.Generators/Khamsin.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../Khamsin.Build/Khamsin.Build.csproj"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../Sample.Lib/Sample.Lib.csproj" />
+  </ItemGroup>
+  <Import Project="../Khamsin.Build/buildTransitive/Khamsin.props" />
+  <Import Project="../Khamsin.Build/buildTransitive/Khamsin.targets" />
+</Project>
