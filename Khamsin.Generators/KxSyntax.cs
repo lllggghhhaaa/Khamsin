@@ -22,9 +22,7 @@ internal static class KxSyntax
         if (access.Expression is IdentifierNameSyntax { Identifier.ValueText: "Kx" })
             return true;
 
-        return access.Expression is MemberAccessExpressionSyntax member &&
-               member.Name.Identifier.ValueText == "Kx" &&
-               member.Expression is IdentifierNameSyntax { Identifier.ValueText: "Khamsin" };
+        return access.Expression is MemberAccessExpressionSyntax { Name.Identifier.ValueText: "Kx", Expression: IdentifierNameSyntax { Identifier.ValueText: "Khamsin" } };
     }
 
     internal static bool TryGetMethod(InvocationExpressionSyntax invocation, SemanticModel model, CancellationToken cancellationToken, out IMethodSymbol method)
