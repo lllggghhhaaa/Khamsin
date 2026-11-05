@@ -58,9 +58,7 @@ internal static class UtilityCss
                 if (value.Arbitrary)
                 {
                     if (!TryUnwrapArbitrary(value.Value, out var raw))
-                    {
                         return false;
-                    }
 
                     var arbitraryValue = negative ? "calc(" + raw + " * -1)" : raw;
                     declarations = baseTemplate.Replace("{v}", arbitraryValue);
@@ -70,9 +68,7 @@ internal static class UtilityCss
                 if (value.CssVariable)
                 {
                     if (!TryUnwrapCssVariable(value.Value, out var name))
-                    {
                         return false;
-                    }
 
                     var reference = "var(" + name + ")";
                     declarations = baseTemplate.Replace("{v}", negative ? "calc(" + reference + " * -1)" : reference);
@@ -85,16 +81,14 @@ internal static class UtilityCss
                     return true;
                 }
 
-                if (SpacingScale.TryFormatFraction(value.Value, out var fraction))
+                if (SpacingScale.TryFormatFraction(value.Value, negative, out var fraction))
                 {
                     declarations = baseTemplate.Replace("{v}", fraction);
                     return true;
                 }
 
                 if (!SpacingScale.TryFormat(value.Value, negative, out var spacing))
-                {
                     return false;
-                }
 
                 declarations = baseTemplate.Replace("{v}", spacing);
                 return true;
@@ -102,8 +96,6 @@ internal static class UtilityCss
 
             case UtilityKind.Color:
             {
-                // The background-color utility is polymorphic for arbitrary values: urls, gradients
-                // and type hints target background-image/size/position like Tailwind's bg-[…].
                 if (value.Arbitrary &&
                     string.Equals(entry.Group, "bg-color", StringComparison.Ordinal) &&
                     TryBuildBackgroundUtility(value.Value, value.Modifier, theme, out var backgroundDeclarations))
@@ -272,7 +264,7 @@ internal static class UtilityCss
         for (var i = 0; i < inner.Length; i++)
         {
             var c = inner[i];
-            if (c is ';' or '{' or '}' || c == '\r' || c == '\n')
+            if (c is ';' or '{' or '}' or '\r' or '\n')
                 return false;
 
             // An escaped underscore keeps itself; a bare one stands in for a space.

@@ -10,4 +10,7 @@ public sealed class KhamsinConfigAttribute : Attribute
 {
     /// <summary>The raw <c>khamsin.json</c> document embedded for this assembly.</summary>
     public string Json { get; set; } = string.Empty;
+
+    /// <summary>Custom CSS content embedded for this assembly, bundled into the consuming stylesheet.</summary>
+    public string Css { get; set; } = string.Empty;
 }

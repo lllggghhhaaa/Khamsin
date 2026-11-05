@@ -69,4 +69,30 @@ public class ExtractionTests
         Assert.Contains("text-forest-600", values);
         Assert.Contains("text-amber-600", values);
     }
+
+    [Fact]
+    public void Render_fragments_in_code_blocks_contribute_author_classes()
+    {
+        var scan = RazorSourceScanner.Scan(
+            """
+            <div class="gap-2">Body</div>
+
+            @code {
+                private RenderFragment Preview = @<div class="gap-8">
+                    <span class="gap-10">Nested</span>
+                </div>;
+
+                private const string Escaped = "<div class=\"gap-12\">escaped</div>";
+                private const string Verbatim = @"<div class=""gap-14"">verbatim</div>";
+            }
+            """);
+
+        var values = scan.AuthorLiterals.Select(literal => literal.Value).ToList();
+
+        Assert.Contains("gap-2", values);
+        Assert.Contains("gap-8", values);
+        Assert.Contains("gap-10", values);
+        Assert.DoesNotContain("gap-12", values);
+        Assert.DoesNotContain("gap-14", values);
+    }
 }

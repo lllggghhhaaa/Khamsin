@@ -17,5 +17,6 @@
     <CompilerVisibleProperty Include="KhamsinConfig" />
     <AdditionalFiles Include="**/*.razor" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" Condition="'$(KhamsinAddRazorAdditionalFiles)' != 'false'" />
     <AdditionalFiles Include="$(KhamsinConfig)" Condition="'$(KhamsinConfig)' != '' and Exists('$(KhamsinConfig)')" />
+    <AdditionalFiles Include="**/*.css" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder);**\obj\**;**\bin\**;**\wwwroot\**;**\node_modules\**" />
   </ItemGroup>
 </Project>

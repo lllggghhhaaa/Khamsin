@@ -77,7 +77,7 @@ public static class SpacingScale
     }
 
     /// <summary>Formats a fraction such as <c>1/3</c> as a percentage, or fails when malformed.</summary>
-    public static bool TryFormatFraction(string key, out string value)
+    public static bool TryFormatFraction(string key, bool negative, out string value)
     {
         value = string.Empty;
         var slash = key.IndexOf('/');
@@ -92,7 +92,7 @@ public static class SpacingScale
             return false;
 
         var percentage = numerator * 100d / denominator;
-        value = FormatNumber(percentage) + "%";
+        value = (negative ? "-" : string.Empty) + FormatNumber(percentage) + "%";
         return true;
     }
 

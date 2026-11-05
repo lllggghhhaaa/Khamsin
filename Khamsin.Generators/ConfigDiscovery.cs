@@ -6,11 +6,12 @@ namespace Khamsin.Generators;
 /// <summary>The configuration document embedded in one referenced assembly, or why it is unusable.</summary>
 internal sealed class ReferencedConfig
 {
-    internal ReferencedConfig(string assemblyName, KhamsinConfig? config, string? error)
+    internal ReferencedConfig(string assemblyName, KhamsinConfig? config, string? error, string css = "")
     {
         AssemblyName = assemblyName;
         Config = config;
         Error = error;
+        Css = css;
     }
 
     internal string AssemblyName { get; }
@@ -18,6 +19,8 @@ internal sealed class ReferencedConfig
     internal KhamsinConfig? Config { get; }
 
     internal string? Error { get; }
+
+    internal string Css { get; }
 }
 
 /// <summary>
@@ -47,9 +50,10 @@ internal static class ConfigDiscovery
             if (json is null)
                 continue;
 
+            var css = ReadCss(assembly) ?? string.Empty;
             byAssembly[name] = KhamsinConfig.TryParse(json, out var config, out var errors)
-                ? new ReferencedConfig(name, config, null)
-                : new ReferencedConfig(name, null, string.Join(" ", errors));
+                ? new ReferencedConfig(name, config, null, css)
+                : new ReferencedConfig(name, null, string.Join(" ", errors), css);
         }
 
         return [.. byAssembly.Values.OrderBy(static item => item.AssemblyName, StringComparer.Ordinal)];
@@ -70,6 +74,27 @@ internal static class ConfigDiscovery
 
             if (attribute.ConstructorArguments.Length == 1 &&
                 attribute.ConstructorArguments[0].Value is string positional)
+                return positional;
+        }
+
+        return null;
+    }
+
+    private static string? ReadCss(IAssemblySymbol assembly)
+    {
+        foreach (var attribute in assembly.GetAttributes())
+        {
+            var attributeClass = attribute.AttributeClass;
+            if (attributeClass is null ||
+                !string.Equals(attributeClass.ToDisplayString(), AttributeName, StringComparison.Ordinal))
+                continue;
+
+            foreach (var argument in attribute.NamedArguments)
+                if (string.Equals(argument.Key, "Css", StringComparison.Ordinal) && argument.Value.Value is string css)
+                    return css;
+
+            if (attribute.ConstructorArguments.Length == 2 &&
+                attribute.ConstructorArguments[1].Value is string positional)
                 return positional;
         }
 

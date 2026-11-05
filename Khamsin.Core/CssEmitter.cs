@@ -9,7 +9,7 @@ namespace Khamsin;
 /// </summary>
 public static class CssEmitter
 {
-    public static string Emit(IEnumerable<ParsedClass> classes, Theme theme, bool includeTheme = true, bool minify = true)
+    public static string Emit(IEnumerable<ParsedClass> classes, Theme theme, bool includeTheme = true, bool minify = true, string customCss = "")
     {
         if (classes is null)
             throw new ArgumentNullException(nameof(classes));
@@ -27,8 +27,24 @@ public static class CssEmitter
         else
             EmitReadable(builder, rules, theme, includeTheme);
 
+        AppendCustomCss(builder, customCss, minify);
         AppendKeyframes(builder, animations, theme, minify);
         return builder.ToString();
+    }
+
+    /// <summary>Appends custom CSS from the library/app configuration in a base cascade layer.</summary>
+    private static void AppendCustomCss(StringBuilder builder, string customCss, bool minify)
+    {
+        if (string.IsNullOrWhiteSpace(customCss))
+            return;
+
+        if (minify)
+        {
+            builder.Append("@layer base{").Append(customCss.Trim()).Append('}');
+            return;
+        }
+
+        builder.Append("\n@layer base {\n").Append(customCss.Trim()).Append("\n}\n");
     }
 
     /// <summary>
@@ -95,7 +111,7 @@ public static class CssEmitter
     {
         if (includeTheme)
         {
-            builder.Append("@layer theme,utilities;");
+            builder.Append("@layer theme,base,utilities;");
             builder.Append("@layer theme{:root{");
             var variables = theme.CssVariables;
             for (var i = 0; i < variables.Count; i++)
@@ -106,6 +122,7 @@ public static class CssEmitter
             }
 
             builder.Append("}}");
+            AppendPreflightMinified(builder);
         }
 
         builder.Append("@layer utilities{");
@@ -117,7 +134,7 @@ public static class CssEmitter
     {
         if (includeTheme)
         {
-            builder.Append("@layer theme, utilities;\n\n");
+            builder.Append("@layer theme, base, utilities;\n\n");
             builder.Append("@layer theme {\n");
             builder.Append("  :root {\n");
             var variables = theme.CssVariables;
@@ -126,11 +143,76 @@ public static class CssEmitter
 
             builder.Append("  }\n");
             builder.Append("}\n\n");
+            AppendPreflightReadable(builder);
         }
 
         builder.Append("@layer utilities {\n");
         WriteReadableRules(builder, rules);
         builder.Append('}');
+    }
+
+    /// <summary>
+    /// Tailwind-compatible preflight. Components and application markup rely on the global reset
+    /// (border-box sizing, zeroed margins, form controls inheriting typography), so it is emitted
+    /// with the theme in the base layer. Utilities in the later layer still win.
+    /// </summary>
+    private static readonly (string Selector, string Declarations)[] PreflightRules =
+    [
+        ("*,::before,::after,::backdrop", "box-sizing:border-box;margin:0;padding:0;border:0 solid"),
+        ("::file-selector-button", "box-sizing:border-box;margin:0;padding:0;border:0 solid"),
+        ("html", "line-height:1.5;-webkit-text-size-adjust:100%;tab-size:4;-webkit-tap-highlight-color:transparent"),
+        ("body", "line-height:inherit"),
+        ("hr", "height:0;color:inherit;border-top-width:1px"),
+        ("h1,h2,h3,h4,h5,h6", "font-size:inherit;font-weight:inherit"),
+        ("a", "color:inherit;text-decoration:inherit"),
+        ("b,strong", "font-weight:bolder"),
+        ("code,kbd,samp,pre", "font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,\"Liberation Mono\",\"Courier New\",monospace;font-size:1em"),
+        ("small", "font-size:80%"),
+        ("sub,sup", "font-size:75%;line-height:0;position:relative;vertical-align:baseline"),
+        ("sub", "bottom:-0.25em"),
+        ("sup", "top:-0.5em"),
+        ("table", "text-indent:0;border-color:inherit;border-collapse:collapse"),
+        ("progress", "vertical-align:baseline"),
+        ("summary", "display:list-item"),
+        ("ol,ul,menu", "list-style:none"),
+        ("img,svg,video,canvas,audio,iframe,embed,object", "display:block;vertical-align:middle"),
+        ("img,video", "max-width:100%;height:auto"),
+        ("button,input,select,optgroup,textarea", "font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:transparent;border-radius:0"),
+        ("::placeholder", "opacity:1;color:color-mix(in oklab,currentcolor 50%,transparent)"),
+        ("textarea", "resize:vertical"),
+        ("::-webkit-search-decoration", "-webkit-appearance:none"),
+        ("::-webkit-date-and-time-value", "min-height:1lh;text-align:inherit"),
+        ("::-webkit-datetime-edit", "display:inline-flex"),
+        ("::-webkit-datetime-edit-fields-wrapper", "padding:0"),
+        ("::-webkit-datetime-edit-year-field,::-webkit-datetime-edit-month-field,::-webkit-datetime-edit-day-field,::-webkit-datetime-edit-hour-field,::-webkit-datetime-edit-minute-field,::-webkit-datetime-edit-second-field,::-webkit-datetime-edit-millisecond-field,::-webkit-datetime-edit-meridiem-field", "padding-block:0"),
+        ("::-webkit-calendar-picker-indicator", "line-height:1"),
+        ("button,input:where([type='button'],[type='reset'],[type='submit'])", "appearance:button"),
+        ("::-webkit-inner-spin-button,::-webkit-outer-spin-button", "height:auto"),
+        ("[hidden]:where(:not([hidden='until-found']))", "display:none !important"),
+    ];
+
+    private static void AppendPreflightMinified(StringBuilder builder)
+    {
+        builder.Append("@layer base{");
+        foreach (var rule in PreflightRules)
+            builder.Append(rule.Selector).Append('{').Append(rule.Declarations).Append('}');
+
+        builder.Append('}');
+    }
+
+    private static void AppendPreflightReadable(StringBuilder builder)
+    {
+        builder.Append("@layer base {\n");
+        foreach (var rule in PreflightRules)
+        {
+            builder.Append("  ").Append(rule.Selector).Append(" {\n");
+            foreach (var declaration in SplitDeclarations(rule.Declarations))
+                builder.Append("    ").Append(FormatDeclaration(declaration)).Append(";\n");
+
+            builder.Append("  }\n");
+        }
+
+        builder.Append("}\n\n");
     }
 
     private static void WriteReadableRules(StringBuilder builder, List<CssRule> rules)
@@ -189,10 +271,7 @@ public static class CssEmitter
                     continue;
                 }
 
-                if (c == quote)
-                {
-                    quote = '\0';
-                }
+                if (c == quote) quote = '\0';
 
                 continue;
             }
@@ -207,17 +286,12 @@ public static class CssEmitter
                     depth++;
                     break;
                 case ')':
-                    if (depth > 0)
-                    {
-                        depth--;
-                    }
+                    if (depth > 0) depth--;
 
                     break;
                 case ';' when depth == 0:
                     if (i > start)
-                    {
                         yield return declarations.Substring(start, i - start);
-                    }
 
                     start = i + 1;
                     break;

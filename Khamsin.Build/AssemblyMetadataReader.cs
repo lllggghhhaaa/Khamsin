@@ -73,26 +73,25 @@ internal static class AssemblyMetadataReader
                 continue;
             }
 
-            var json = ReadConfigJson(reader, handle);
+            var (json, css) = ReadConfigJsonAndCss(reader, handle);
             if (json is not null)
-                result.Configs.Add(new ConfigInfo(assemblyName, json));
+                result.Configs.Add(new ConfigInfo(assemblyName, json, css));
         }
     }
 
     /// <summary>Reads the <c>Json</c> named argument from a <c>KhamsinConfigAttribute</c> blob.</summary>
-    private static string? ReadConfigJson(MetadataReader reader, CustomAttributeHandle handle)
+    private static (string? Json, string Css) ReadConfigJsonAndCss(MetadataReader reader, CustomAttributeHandle handle)
     {
+        var css = string.Empty;
+
         var attribute = reader.GetCustomAttribute(handle);
         var attributeType = TypeNames.FromAttributeType(reader, attribute);
         if (!string.Equals(attributeType, ConfigAttributeName, StringComparison.Ordinal))
-            return null;
+            return (null, "");
 
         var blob = reader.GetBlobReader(attribute.Value);
-        if (blob.Length < 4)
-            return null;
-
-        if (blob.ReadUInt16() != 0x0001)
-            return null;
+        if (blob.Length < 4 || blob.ReadUInt16() != 0x0001)
+            return (null, "");
 
         var namedCount = blob.ReadUInt16();
         for (var i = 0; i < namedCount; i++)
@@ -114,12 +113,30 @@ internal static class AssemblyMetadataReader
                 break;
 
             if (!isArray && elementType == 0x0E && string.Equals(name, "Json", StringComparison.Ordinal))
-                return blob.ReadSerializedString() ?? string.Empty;
+            {
+                var json = blob.ReadSerializedString() ?? string.Empty;
+                // Continue scanning for the Css named argument after Json.
+                for (var j = i + 1; j < namedCount; j++)
+                {
+                    if (blob.RemainingBytes < 2) break;
+                    blob.ReadByte();
+                    var cssElementType = blob.ReadByte();
+                    var cssIsArray = false;
+                    if (cssElementType == 0x1D) { cssIsArray = true; cssElementType = blob.ReadByte(); }
+                    var cssName = blob.ReadSerializedString();
+                    if (cssName is null) break;
+                    if (!cssIsArray && cssElementType == 0x0E && string.Equals(cssName, "Css", StringComparison.Ordinal))
+                        css = blob.ReadSerializedString() ?? string.Empty;
+                    else
+                        SkipValue(blob, cssElementType, cssIsArray);
+                }
+                return (json, css);
+            }
 
             SkipValue(blob, elementType, isArray);
         }
 
-        return null;
+        return (null, "");
     }
 
     private static ManifestInfo? ReadManifest(MetadataReader reader, CustomAttributeHandle handle)
@@ -130,10 +147,8 @@ internal static class AssemblyMetadataReader
             return null;
 
         var blob = reader.GetBlobReader(attribute.Value);
-        if (blob.Length < 4)
-            return null;
 
-        if (blob.ReadUInt16() != 0x0001)
+        if (blob.Length < 4 || blob.ReadUInt16() != 0x0001)
             return null;
 
         var namedCount = blob.ReadUInt16();

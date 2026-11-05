@@ -41,6 +41,16 @@ public sealed class KhamsinConfig
     /// <summary>Animation tokens: shorthand plus optional keyframes, used by <c>animate-&lt;name&gt;</c>.</summary>
     public Dictionary<string, AnimationDefinition>? Animations { get; set; }
 
+    /// <summary>
+    /// Custom CSS content bundled into the generated stylesheet between the theme and utilities
+    /// layers. Set by the caller after resolving the <c>css</c> file paths against the project
+    /// directory; libraries have the content embedded by the generator.
+    /// </summary>
+    public string? Css { get; set; }
+
+    /// <summary>Raw <c>css</c> file paths from the JSON, resolved by the caller against the project directory.</summary>
+    public List<string>? CssFiles { get; set; }
+
     /// <summary>Parses configuration JSON. Returns false and fills <paramref name="errors"/> when the document or any entry is invalid.</summary>
     public static bool TryParse(string json, out KhamsinConfig? config, out IReadOnlyList<string> errors)
     {
@@ -88,6 +98,9 @@ public sealed class KhamsinConfig
                     break;
                 case "animations":
                     parsed.Animations = ReadAnimations(member, collected);
+                    break;
+                case "css":
+                    parsed.CssFiles = ReadStringArray(member, "css", collected);
                     break;
                 default:
                     collected.Add($"Unknown configuration key '{member.Key}'.");
@@ -157,6 +170,17 @@ public sealed class KhamsinConfig
         return target;
     }
 
+    /// <summary>Concatenates the Css content of merged configurations in order.</summary>
+    public static string MergeCss(IReadOnlyList<KhamsinConfig> configs)
+    {
+        var builder = new System.Text.StringBuilder();
+        foreach (var config in configs)
+            if (!string.IsNullOrWhiteSpace(config.Css))
+                builder.AppendLine(config.Css);
+
+        return builder.ToString();
+    }
+
     /// <summary>Builds a Theme from the built-in defaults with this config's entries merged over them.</summary>
     public Theme ToTheme()
     {
@@ -185,6 +209,26 @@ public sealed class KhamsinConfig
             foreach (var pair in overrides) merged[pair.Key] = pair.Value;
 
         return merged;
+    }
+
+    private static List<string>? ReadStringArray(KeyValuePair<string, JsonValue> member, string key, List<string> errors)
+    {
+        if (member.Value.Kind != JsonValueKind.Array)
+        {
+            errors.Add($"'{key}' must be an array of file paths.");
+            return null;
+        }
+
+        var result = new List<string>();
+        foreach (var item in member.Value.Items!)
+        {
+            if (item.Kind == JsonValueKind.String)
+                result.Add(item.Text!);
+            else
+                errors.Add($"'{key}' entries must be strings.");
+        }
+
+        return result;
     }
 
     private static Dictionary<string, AnimationDefinition> ReadAnimations(KeyValuePair<string, JsonValue> member, List<string> errors)
@@ -498,9 +542,6 @@ public sealed class KhamsinConfig
     {
         if (string.IsNullOrWhiteSpace(value)) return false;
 
-        // Double quotes are legal inside CSS values (font names); semicolons would split the
-        // minified token list, braces would break the :root block, and control characters and
-        // at-signs have no business in a token value.
         foreach (var c in value)
             if (c is ';' or '{' or '}' or '@' || char.IsControl(c))
                 return false;

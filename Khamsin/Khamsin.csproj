@@ -9,7 +9,7 @@
     <!-- The task assemblies intentionally live under tasks/, not lib/. -->
     <NoWarn>$(NoWarn);NU5100;NU5128</NoWarn>
     <PackageId>Khamsin</PackageId>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <Authors>lllggghhhaaa</Authors>
     <Copyright>Copyright (c) 2026 Khamsin contributors</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -18,7 +18,7 @@
     <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Adds library configuration merging: referenced assemblies embed their khamsin.json and consumers merge it under their own configuration.</PackageReleaseNotes>
+    <PackageReleaseNotes>Bundles custom CSS into khamsin.css: khamsin.json's css files and referenced libraries' stylesheets are emitted in the base layer between theme and utilities, so consumers link one stylesheet. Emits a Tailwind-compatible preflight in the base layer, extracts class attributes from render fragments declared in @code blocks, accepts fully qualified Khamsin.Cn/Khamsin.Kx calls, adds visible/invisible utilities and animate-in fade defaults, and fixes negative fraction utilities plus the attribute emitter and metadata reader.</PackageReleaseNotes>
     <PackageTags>blazor;css;utility-css;dotnet;msbuild;source-generator</PackageTags>
   </PropertyGroup>
 

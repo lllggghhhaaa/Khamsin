@@ -60,6 +60,15 @@ public class CnScannerTests
     }
 
     [Fact]
+    public void Component_class_parameters_are_scanned_case_insensitively()
+    {
+        var scan = RazorSourceScanner.Scan("""<WaxButton Class="w-full px-6">x</WaxButton>""");
+        var values = scan.AuthorLiterals.Select(l => l.Value).ToList();
+        Assert.Contains("w-full", values);
+        Assert.Contains("px-6", values);
+    }
+
+    [Fact]
     public void Interpolated_strings_are_still_rejected()
     {
         Assert.Empty(CSharpSourceScanner.FindKxLiterals("""Cn.Of($"p-{size}")"""));

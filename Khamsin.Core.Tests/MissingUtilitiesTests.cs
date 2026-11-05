@@ -26,6 +26,19 @@ public class MissingUtilitiesTests
     }
 
     [Fact]
+    public void Spacing_scale_covers_gap_steps()
+    {
+        var css = Css("gap-6", "gap-8", "gap-x-8", "gap-y-8", "gap-10", "gap-12", "gap-16");
+
+        Assert.Contains(".gap-8{gap:calc(var(--spacing) * 8)}", css);
+        Assert.Contains(".gap-x-8{column-gap:calc(var(--spacing) * 8)}", css);
+        Assert.Contains(".gap-y-8{row-gap:calc(var(--spacing) * 8)}", css);
+        Assert.Contains(".gap-10{gap:calc(var(--spacing) * 10)}", css);
+        Assert.Contains(".gap-12{gap:calc(var(--spacing) * 12)}", css);
+        Assert.Contains(".gap-16{gap:calc(var(--spacing) * 16)}", css);
+    }
+
+    [Fact]
     public void Inset_accepts_the_full_keyword()
     {
         Assert.Contains(".top-full{top:100%}", Css("top-full"));

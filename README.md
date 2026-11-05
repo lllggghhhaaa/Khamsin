@@ -36,13 +36,16 @@ both are statically reachable.
 ## Install
 
 ```xml
-<PackageReference Include="Khamsin" Version="0.2.0" />
+<PackageReference Include="Khamsin" Version="0.3.0" />
 ```
 
 The package carries the runtime (`lib/net8.0`), the analyzer and manifest generator
 (`analyzers/dotnet/cs`), the MSBuild task (`tasks/net8.0`) and the
 `buildTransitive` props/targets. Reference it from every project whose components use Khamsin classes;
 libraries get manifests, the executable or web project gets the stylesheet.
+
+The generated stylesheet also bundles the theme, a Tailwind-compatible preflight, and any CSS listed
+under `css` in `khamsin.json`, including stylesheets contributed by referenced libraries.
 
 Serve the generated file like any other static asset:
 

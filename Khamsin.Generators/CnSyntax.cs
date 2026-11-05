@@ -11,6 +11,7 @@ namespace Khamsin.Generators;
 /// </summary>
 internal static class CnSyntax
 {
+    /// <summary>Accepts unqualified <c>Cn.Of(...)</c> and fully qualified <c>Khamsin.Cn.Of(...)</c>.</summary>
     internal static bool IsCandidate(SyntaxNode node)
     {
         if (node is not InvocationExpressionSyntax invocation)
@@ -20,7 +21,21 @@ internal static class CnSyntax
             return false;
 
         var name = access.Name.Identifier.ValueText;
-        return name is "Of" or "Merge" && access.Expression is IdentifierNameSyntax { Identifier.ValueText: "Cn" };
+       
+        return name is "Of" or "Merge" && IsCnReceiver(access.Expression);
+    }
+
+    internal static bool IsCnReceiver(ExpressionSyntax expression)
+    {
+        if (expression is IdentifierNameSyntax { Identifier.ValueText: "Cn" })
+            return true;
+
+        if (expression is MemberAccessExpressionSyntax member &&
+            member.Name.Identifier.ValueText == "Cn" &&
+            member.Expression is IdentifierNameSyntax { Identifier.ValueText: "Khamsin" })
+            return true;
+
+        return false;
     }
 
     internal static bool TryGetMethod(InvocationExpressionSyntax invocation, SemanticModel model, CancellationToken cancellationToken, out IMethodSymbol method)
@@ -125,6 +140,16 @@ internal static class CnSyntax
             return;
         }
 
+        // Component parameters (the Blazor [Parameter] convention) carry values written as literal
+        // attributes at the consumer's call site, where the scan extracts them.
+        var symbol = model.GetSymbolInfo(expression, cancellationToken).Symbol
+            ?? model.GetDeclaredSymbol(expression, cancellationToken);
+        if (symbol is IParameterSymbol)
+            return;
+
+        if (symbol is IPropertySymbol property && HasParameterAttribute(property))
+            return;
+
         var type = model.GetTypeInfo(expression, cancellationToken).Type;
         if (type is null || type.TypeKind == TypeKind.Error)
             return;
@@ -141,6 +166,11 @@ internal static class CnSyntax
 
         nonLiterals.Add((text, expression.GetLocation()));
     }
+
+    private static bool HasParameterAttribute(IPropertySymbol prop)
+        => prop.GetAttributes().Any(attribute =>
+            string.Equals(attribute.AttributeClass?.ToDisplayString(), "Microsoft.AspNetCore.Components.ParameterAttribute", StringComparison.Ordinal)
+            || string.Equals(attribute.AttributeClass?.Name, "ParameterAttribute", StringComparison.Ordinal));
 
     private static void VisitInitializer(
         InitializerExpressionSyntax initializer,

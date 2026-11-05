@@ -25,6 +25,8 @@ internal static class BuiltInUtilities
             Static("table", "display:table", "display", 18),
             Static("flow-root", "display:flow-root", "display", 19),
             Static("hidden", "display:none", "display", 20),
+            Static("invisible", "visibility:hidden", "visibility", 21),
+            Static("visible", "visibility:visible", "visibility", 22),
             Static("sr-only", "position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0", "visibility", 30),
             Static("not-sr-only", "position:static;width:auto;height:auto;padding:0;margin:0;overflow:visible;clip:auto;white-space:normal", "visibility", 31),
             Static("static", "position:static", "position", 50),
@@ -588,8 +590,16 @@ internal static class BuiltInUtilities
 
         // fade-in-<opacity>, zoom-in-<percent> and slide-in-from-<edge>-<spacing> set the enter
         // variables consumed by the khamsin-enter keyframes; the -out family mirrors them.
-        var fadeIn = new Dictionary<string, string>(Ordinal) { [string.Empty] = "--khamsin-enter-opacity:0" };
-        var fadeOut = new Dictionary<string, string>(Ordinal) { [string.Empty] = "--khamsin-exit-opacity:0" };
+        var fadeIn = new Dictionary<string, string>(Ordinal)
+        {
+            [string.Empty] = "--khamsin-enter-opacity:0",
+            ["0"] = "--khamsin-enter-opacity:0",
+        };
+        var fadeOut = new Dictionary<string, string>(Ordinal)
+        {
+            [string.Empty] = "--khamsin-exit-opacity:0",
+            ["0"] = "--khamsin-exit-opacity:0",
+        };
         for (var opacity = 5; opacity <= 100; opacity += 5)
         {
             fadeIn[opacity.ToString()] = "--khamsin-enter-opacity:" + SpacingScale.FormatNumber(opacity / 100d);
@@ -850,15 +860,6 @@ internal static class BuiltInUtilities
     {
         var entries = new List<UtilityEntry>(6);
 
-        void Slot(string prefix, string group, string variable, int order, params (string Value, string Keyword)[] steps)
-        {
-            var values = new Dictionary<string, string>(Ordinal);
-            foreach (var (value, keyword) in steps)
-                values[value] = "--khamsin-" + variable + ":" + keyword + ";" + NumericComposition;
-
-            entries.Add(new UtilityEntry(prefix, UtilityKind.Enum, group, order, values: values));
-        }
-
         Slot("tabular-nums", "numeric/tabular", "numeric", 706, ("", "tabular-nums"));
         Slot("proportional-nums", "numeric/tabular", "numeric", 707, ("", "proportional-nums"));
         Slot("lining-nums", "numeric/lining", "numeric", 708, ("", "lining-nums"));
@@ -871,6 +872,15 @@ internal static class BuiltInUtilities
             ("", "--khamsin-numeric:normal;--khamsin-ordinal:normal;--khamsin-slashed-zero:normal;--khamsin-fraction:normal;" + NumericComposition))));
 
         return entries;
+
+        void Slot(string prefix, string group, string variable, int order, params (string Value, string Keyword)[] steps)
+        {
+            var values = new Dictionary<string, string>(Ordinal);
+            foreach (var (value, keyword) in steps)
+                values[value] = "--khamsin-" + variable + ":" + keyword + ";" + NumericComposition;
+
+            entries.Add(new UtilityEntry(prefix, UtilityKind.Enum, group, order, values: values));
+        }
     }
 
     private static Dictionary<string, string> WidthKeywords() => Keywords(
@@ -969,9 +979,9 @@ internal static class BuiltInUtilities
         };
 
         const string arbitrary = "--khamsin-ring-inset:inset;--khamsin-ring-width:{v};" + shadow;
-        return new List<UtilityEntry>
-        {
-            new(
+        return
+        [
+            new UtilityEntry(
                 "inset-ring",
                 UtilityKind.Enum,
                 "inset-ring",
@@ -979,8 +989,9 @@ internal static class BuiltInUtilities
                 template: arbitrary,
                 values: values,
                 arbitraryTemplate: arbitrary),
-            new("inset-ring", UtilityKind.Color, "ring-color", 929, template: "--khamsin-ring-color:{v}"),
-        };
+
+            new UtilityEntry("inset-ring", UtilityKind.Color, "ring-color", 929, template: "--khamsin-ring-color:{v}")
+        ];
     }
 
     /// <summary>v4 inset shadows carry their color through a variable so <c>inset-shadow-{color}</c> recolors them.</summary>

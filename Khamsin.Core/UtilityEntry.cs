@@ -118,8 +118,8 @@ public sealed class UtilityEntry
                 if (negative && Keywords != null && Keywords.ContainsKey(remainder))
                     return false;
 
-                if (Keywords is not null && Keywords.TryGetValue(remainder, out _) || 
-                    AcceptsFraction && SpacingScale.TryFormatFraction(remainder, out _))
+                if (Keywords is not null && Keywords.TryGetValue(remainder, out _) ||
+                    AcceptsFraction && SpacingScale.TryFormatFraction(remainder, negative, out _))
                 {
                     bound = new BoundValue(remainder, null, false, false);
                     return true;

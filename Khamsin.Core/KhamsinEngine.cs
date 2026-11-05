@@ -32,7 +32,7 @@ public sealed class KhamsinEngine(Theme theme)
     public bool TryParse(string raw, out ParsedClass parsed, out ClassParseError? error)
         => Registry.TryParse(raw, out parsed, out error);
 
-    public CssGenerationResult Generate(IEnumerable<string> classNames, bool minify = true)
+    public CssGenerationResult Generate(IEnumerable<string> classNames, bool minify = true, string customCss = "")
     {
         if (classNames is null)
             throw new ArgumentNullException(nameof(classNames));
@@ -55,7 +55,7 @@ public sealed class KhamsinEngine(Theme theme)
             }
         }
 
-        return new CssGenerationResult(CssEmitter.Emit(parsed, Theme, minify: minify), unknown);
+        return new CssGenerationResult(CssEmitter.Emit(parsed, Theme, minify: minify, customCss: customCss), unknown);
     }
 
     public string GenerateCss(IEnumerable<string> classNames, bool minify = true) => Generate(classNames, minify).Css;

@@ -23,7 +23,8 @@ all read it, and it is an incremental input: editing it regenerates the styleshe
   "containers":  { "content": "48rem" },
   "animations": {
     "pop": { "value": "pop 0.2s var(--ease-out)", "keyframes": { "from": "opacity:0", "to": "opacity:1" } }
-  }
+  },
+  "css": ["Theme/tokens.css", "app.css"]
 }
 ```
 
@@ -37,6 +38,14 @@ feed `animate-{name}` and their keyframes are tree-shaken. The `dark` key is a s
 Names are lowercase letters/digits/dashes; values must not contain `;`, `{`, `}`, `@`. Invalid
 entries are **KHM005** build errors.
 
+## CSS bundling
+
+The optional `css` list points at stylesheets (relative to the project) that ship **inside the
+generated `khamsin.css`**, in a `base` cascade layer between the theme and the utilities - so
+theme variables and hand-written rules load through the one stylesheet the app already links
+(`MapKhamsinCss()` or the static asset), with no separate `tokens.css`/`app.css` files to serve.
+Files resolve by name against the project's CSS files; the list is an incremental input too.
+
 ## Runtime merging
 
 The generator emits a `Khamsin.ThemeRegistration.g.cs` with a `[ModuleInitializer]` that calls
@@ -49,7 +58,8 @@ replace a default `bg-white`). First call wins.
 Every project runs the generator, including class libraries. A library with its own `khamsin.json`
 embeds the document as a `[KhamsinConfig(Json = "…")]` assembly attribute. When an app references
 that library, the app's generator and CSS task read the attribute and merge it under the app's own
-configuration, so library tokens validate and emit without being copied into the app.
+configuration, so library tokens validate and emit without being copied into the app. The library's
+`css` files travel the same way and land in the app's `base` layer.
 
 The merge order is deterministic:
 

@@ -78,6 +78,14 @@ public class EmitterTests
     }
 
     [Fact]
+    public void Emits_negative_fraction_translates()
+    {
+        Assert.Contains(".-translate-x-1\\/2{--khamsin-translate-x:-50%", Css("-translate-x-1/2"));
+        Assert.Contains(".-translate-y-1\\/3{--khamsin-translate-y:-33.333333%", Css("-translate-y-1/3"));
+        Assert.Contains(".-top-1\\/2{top:-50%}", Css("-top-1/2"));
+    }
+
+    [Fact]
     public void Emits_arbitrary_and_css_variable_values()
     {
         Assert.Equal("@layer utilities{.w-\\[320px\\]{width:320px}}", Css("w-[320px]"));
@@ -144,12 +152,24 @@ public class EmitterTests
     {
         var css = CssEmitter.Emit(Array.Empty<ParsedClass>(), Theme.Default);
 
-        Assert.StartsWith("@layer theme,utilities;@layer theme{:root{", css);
+        Assert.StartsWith("@layer theme,base,utilities;@layer theme{:root{", css);
         Assert.Contains("--spacing:0.25rem", css);
         Assert.Contains("--color-ocean-600:#2f6bc6", css);
         Assert.Contains("--radius-lg:0.5rem", css);
         Assert.Contains("--breakpoint-md:48rem", css);
+        Assert.Contains("@layer base{*,::before,::after,::backdrop{box-sizing:border-box", css);
         Assert.EndsWith("@layer utilities{}", css);
+    }
+
+    [Fact]
+    public void Preflight_is_emitted_with_the_theme_only()
+    {
+        var withTheme = CssEmitter.Emit(Array.Empty<ParsedClass>(), Theme.Default);
+        var utilitiesOnly = CssEmitter.Emit(Array.Empty<ParsedClass>(), Theme.Default, includeTheme: false);
+
+        Assert.Contains("@layer base{*,::before,::after,::backdrop{box-sizing:border-box", withTheme);
+        Assert.DoesNotContain("@layer base", utilitiesOnly);
+        Assert.Equal("@layer utilities{}", utilitiesOnly);
     }
 
     [Fact]
@@ -169,8 +189,9 @@ public class EmitterTests
     {
         var css = CssEmitter.Emit(Array.Empty<ParsedClass>(), Theme.Default, minify: false);
 
-        Assert.StartsWith("@layer theme, utilities;\n\n@layer theme {\n  :root {\n    --breakpoint-2xl: 96rem;\n", css);
-        Assert.Contains("\n  }\n}\n\n@layer utilities {\n", css);
+        Assert.StartsWith("@layer theme, base, utilities;\n\n@layer theme {\n  :root {\n    --breakpoint-2xl: 96rem;\n", css);
+        Assert.Contains("\n  }\n}\n\n@layer base {\n  *,::before,::after,::backdrop {\n    box-sizing: border-box;\n", css);
+        Assert.Contains("\n}\n\n@layer utilities {\n", css);
     }
 
     [Fact]

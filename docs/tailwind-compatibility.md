@@ -39,8 +39,10 @@ lists only what Tailwind has that Khamsin does not.
    so every alternative is a literal; keep runtime values in CSS variables (`w-(--w)` + `style="--w:…"`).
 3. **Pick a dark strategy.** Default `dark:` emits `.dark <selector>`; `"dark": "media"` follows
    `prefers-color-scheme` (see [config.md](config.md)).
-4. **No preflight.** Khamsin emits no global reset; add your own before the layers. Border
-   utilities set `border-style` themselves for this reason.
+4. **Preflight is included.** With the theme, Khamsin emits a Tailwind-compatible preflight in
+   the base layer: border-box sizing, zeroed margins/padding, reset borders, form controls that
+   inherit typography. Utilities in the later layer still override it. Set app-wide element
+   defaults (colors, fonts) with your own CSS in the same base layer.
 5. **Unknown utilities are KHM002 errors** in `Khamsin=`/`Kx.*` positions (see
    [analyzer-rules.md](analyzer-rules.md)); in plain `class` attributes they are ignored.
 6. **`@apply` and plugins do not exist.** Write the rule by hand, or add a registry entry when the

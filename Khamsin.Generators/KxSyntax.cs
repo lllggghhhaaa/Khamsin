@@ -16,7 +16,15 @@ internal static class KxSyntax
             return false;
 
         var name = access.Name.Identifier.ValueText;
-        return name is "When" or "Variant" && access.Expression is IdentifierNameSyntax { Identifier.ValueText: "Kx" };
+        if (name is not ("When" or "Variant"))
+            return false;
+
+        if (access.Expression is IdentifierNameSyntax { Identifier.ValueText: "Kx" })
+            return true;
+
+        return access.Expression is MemberAccessExpressionSyntax member &&
+               member.Name.Identifier.ValueText == "Kx" &&
+               member.Expression is IdentifierNameSyntax { Identifier.ValueText: "Khamsin" };
     }
 
     internal static bool TryGetMethod(InvocationExpressionSyntax invocation, SemanticModel model, CancellationToken cancellationToken, out IMethodSymbol method)

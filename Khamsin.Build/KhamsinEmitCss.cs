@@ -79,8 +79,6 @@ public sealed class KhamsinEmitCss : Task
         }
         else
         {
-            // Fall back to the configuration the generator embedded in the consumer itself, for
-            // builds where the task did not receive a config path.
             foreach (var info in consumer.Configs.OrderBy(static info => info.AssemblyName, StringComparer.Ordinal))
                 AddConfig(configurations, info);
         }
@@ -115,6 +113,23 @@ public sealed class KhamsinEmitCss : Task
         }
 
         var consumer = AssemblyMetadataReader.Scan(AssemblyPath, scanUsage: true);
+
+        // Resolve the app's own CSS from the khamsin.json's css file paths.
+        if (ConfigPath.Length > 0 && File.Exists(ConfigPath) &&
+            KhamsinConfig.TryLoad(ConfigPath, out var ownConfig, out _) && ownConfig is not null)
+        {
+            var cssBuilder = new StringBuilder();
+            var configDir = Path.GetDirectoryName(ConfigPath) ?? string.Empty;
+            foreach (var cssPath in ownConfig.CssFiles ?? [])
+            {
+                var fullPath = Path.GetFullPath(cssPath, configDir);
+                if (File.Exists(fullPath))
+                    cssBuilder.AppendLine(File.ReadAllText(fullPath));
+            }
+
+            consumer.OwnCss = cssBuilder.ToString();
+        }
+
         var manifests = new Dictionary<string, ManifestInfo>(StringComparer.Ordinal);
         var assemblyManifests = new Dictionary<string, List<ManifestInfo>>(StringComparer.OrdinalIgnoreCase);
         var contributingAssemblies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -174,16 +189,12 @@ public sealed class KhamsinEmitCss : Task
             foreach (var use in manifest.Uses.Where(use => !visited.Contains(use))) queue.Enqueue(use);
         }
 
-        // Helper-class manifests are not attached to a component, so they cannot be tree-shaken.
-        // Include them only for assemblies that contributed a used component.
         foreach (var manifest in assemblyManifests.Where(pair => contributingAssemblies.Contains(pair.Key)).SelectMany(pair => pair.Value))
             AddClasses(classes, manifest.Classes);
 
         foreach (var manifest in consumer.AssemblyManifests) 
             AddClasses(classes, manifest.Classes);
 
-        // The consumer's own components always contribute: the spec treats the app's sources as one
-        // closed set, whether or not every component is currently rendered.
         foreach (var manifest in consumer.Manifests.Values) 
             AddClasses(classes, manifest.Classes);
 
@@ -210,12 +221,28 @@ public sealed class KhamsinEmitCss : Task
             }
         }
 
-        var result = engine.Generate(classes, Minify);
+        var customCss = CollectCustomCss(consumer, referencedConfigs.Values);
+        var result = engine.Generate(classes, Minify, customCss);
         foreach (var unknown in result.UnknownClasses) 
             Log.LogWarning(null, "KHM002", null, null, 0, 0, 0, 0, "Khamsin: '{0}' is not a known utility class and was not emitted.", unknown);
 
         Write(result.Css);
         Log.LogMessage(MessageImportance.Low, "Khamsin: {0} classes -> {1} bytes at '{2}'.", classes.Count, result.Css.Length, OutputPath);
+    }
+
+    /// <summary>Collects custom CSS from the app config and referenced library configs.</summary>
+    private static string CollectCustomCss(
+        AssemblyScanResult consumer, IEnumerable<ConfigInfo> referencedConfigs)
+    {
+        var builder = new System.Text.StringBuilder();
+        foreach (var config in referencedConfigs)
+            if (!string.IsNullOrWhiteSpace(config.Css))
+                builder.AppendLine(config.Css);
+
+        if (!string.IsNullOrWhiteSpace(consumer.OwnCss))
+            builder.AppendLine(consumer.OwnCss);
+
+        return builder.ToString();
     }
 
     private void Write(string css)
@@ -228,8 +255,6 @@ public sealed class KhamsinEmitCss : Task
             var existing = File.ReadAllText(OutputPath, Encoding.UTF8);
             if (string.Equals(existing, css, StringComparison.Ordinal))
             {
-                // The target's up-to-date check compares input timestamps with this file. Touching
-                // an unchanged stylesheet lets the next build skip the task without rewriting it.
                 File.SetLastWriteTimeUtc(OutputPath, DateTime.UtcNow);
                 Log.LogMessage(MessageImportance.Low, "Khamsin: stylesheet is up to date.");
                 return;

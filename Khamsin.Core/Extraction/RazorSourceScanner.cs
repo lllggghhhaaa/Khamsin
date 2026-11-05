@@ -1,48 +1,10 @@
 namespace Khamsin.Extraction;
 
-public sealed class RazorClassLiteral
-{
-    public RazorClassLiteral(string value, int offset, int group)
-    {
-        Value = value;
-        Offset = offset;
-        Group = group;
-    }
+public sealed record RazorClassLiteral(string Value, int Offset, int Group);
 
-    public string Value { get; }
+public sealed record RazorComponentTag(string Name, int Offset);
 
-    /// <summary>Offset of the token in the original file, used for diagnostics.</summary>
-    public int Offset { get; }
-
-    /// <summary>Identifies the literal this token came from, for conflict diagnostics.</summary>
-    public int Group { get; }
-}
-
-public sealed class RazorComponentTag
-{
-    public RazorComponentTag(string name, int offset)
-    {
-        Name = name;
-        Offset = offset;
-    }
-
-    public string Name { get; }
-
-    public int Offset { get; }
-}
-
-public sealed class RazorNonLiteralUsage
-{
-    public RazorNonLiteralUsage(int offset, int length)
-    {
-        Offset = offset;
-        Length = length;
-    }
-
-    public int Offset { get; }
-
-    public int Length { get; }
-}
+public sealed record RazorNonLiteralUsage(int Offset, int Length);
 
 /// <summary>Facts extracted from a <c>.razor</c> file without invoking the Razor compiler.</summary>
 public sealed class RazorScanResult
@@ -104,11 +66,9 @@ public static class RazorSourceScanner
 
         ScanDirectives(blanked, imports, ref namespaceOverride);
         ScanKhamsinAttributes(blanked, literals, nonLiteral);
-        ScanClassAttributes(blanked, authorLiterals);
+        ScanClassAttributes(text, authorLiterals);
         ScanComponentTags(blanked, components);
 
-        // Literal-based helpers inside @code blocks and inline expressions. Scan the original text
-        // because code blocks were blanked for tag/attribute discovery.
         var group = 1_000_000;
         foreach (var literal in CSharpSourceScanner.FindKxLiterals(text))
         {
@@ -116,7 +76,6 @@ public static class RazorSourceScanner
             AddClassTokens(literals, literal.Value, literal.Offset, group);
         }
 
-        // KhamsinClass constants declared in @code are component defaults and part of the closed set.
         foreach (var literal in CSharpSourceScanner.FindKhamsinClassLiterals(text))
         {
             group++;
@@ -202,8 +161,6 @@ public static class RazorSourceScanner
             var trimmed = value.TrimStart();
             if (value.IndexOf('@') >= 0)
             {
-                // Kx.* calls are literal-based; a literal expression such as @("px-4") is also
-                // statically known. Everything else is a runtime expression we cannot read.
                 if (value.IndexOf("Kx.", StringComparison.Ordinal) >= 0 || value.IndexOf("Cn.", StringComparison.Ordinal) >= 0)
                     continue;
 
@@ -406,10 +363,18 @@ public static class RazorSourceScanner
         var group = 2_000_000;
         while (index < text.Length - 5)
         {
-            var at = text.IndexOf("class", index, StringComparison.Ordinal);
-            if (at < 0)
-                return;
+            if (TrySkipNonMarkup(text, ref index))
+                continue;
 
+            // Case-insensitive so component parameters spelled `Class="..."` (the Blazor convention
+            // for consumer overrides) are extracted exactly like plain `class="..."` attributes.
+            if (!MatchesWordIgnoreCase(text, index, "class"))
+            {
+                index++;
+                continue;
+            }
+
+            var at = index;
             index = at + 5;
             if (at > 0 && IsIdentifierChar(text[at - 1]))
                 continue;
@@ -444,6 +409,138 @@ public static class RazorSourceScanner
             group++;
             AddClassTokens(literals, literalPart, start, group);
         }
+    }
+
+    /// <summary>
+    /// Skips C# comments and string literals so <c>class</c> attributes inside documentation
+    /// strings are not mistaken for rendered markup. Rendering also sees the code blocks, which
+    /// may declare render fragments such as <c>@&lt;div class="gap-8"&gt;</c>.
+    /// </summary>
+    private static bool TrySkipNonMarkup(string text, ref int index)
+    {
+        if (index + 1 < text.Length && text[index] == '/')
+        {
+            if (text[index + 1] == '/')
+            {
+                var lineEnd = text.IndexOf('\n', index + 2);
+                index = lineEnd < 0 ? text.Length : lineEnd + 1;
+                return true;
+            }
+
+            if (text[index + 1] == '*')
+            {
+                var blockEnd = text.IndexOf("*/", index + 2, StringComparison.Ordinal);
+                index = blockEnd < 0 ? text.Length : blockEnd + 2;
+                return true;
+            }
+        }
+
+        return TrySkipString(text, ref index);
+    }
+
+    private static bool TrySkipString(string text, ref int index)
+    {
+        var cursor = index;
+        var verbatim = false;
+        while (cursor < text.Length && (text[cursor] == '@' || text[cursor] == '$'))
+        {
+            if (text[cursor] == '@' && cursor + 1 < text.Length && (text[cursor + 1] == '"' || text[cursor + 1] == '$' || text[cursor + 1] == '@'))
+                verbatim = true;
+
+            cursor++;
+            if (cursor - index > 2)
+                return false;
+        }
+
+        if (cursor >= text.Length || text[cursor] != '"')
+            return false;
+
+        var quotes = 1;
+        while (cursor + quotes < text.Length && text[cursor + quotes] == '"') quotes++;
+
+        if (quotes >= 3)
+        {
+            var close = cursor + quotes;
+            while (close < text.Length)
+            {
+                if (text[close] != '"')
+                {
+                    close++;
+                    continue;
+                }
+
+                var run = 1;
+                while (close + run < text.Length && text[close + run] == '"') run++;
+                if (run >= quotes)
+                {
+                    index = close + run;
+                    return true;
+                }
+
+                close += run;
+            }
+
+            index = text.Length;
+            return true;
+        }
+
+        if (verbatim)
+        {
+            var close = cursor + 1;
+            while (close < text.Length)
+            {
+                if (text[close] != '"')
+                {
+                    close++;
+                    continue;
+                }
+
+                if (close + 1 < text.Length && text[close + 1] == '"')
+                {
+                    close += 2;
+                    continue;
+                }
+
+                index = close + 1;
+                return true;
+            }
+
+            index = text.Length;
+            return true;
+        }
+
+        var end = cursor + 1;
+        while (end < text.Length)
+        {
+            if (text[end] == '\\')
+            {
+                end += 2;
+                continue;
+            }
+
+            if (text[end] == '"')
+            {
+                index = end + 1;
+                return true;
+            }
+
+            end++;
+        }
+
+        index = text.Length;
+        return true;
+    }
+
+    private static bool MatchesWordIgnoreCase(string text, int start, string word)
+    {
+        if (start + word.Length > text.Length)
+            return false;
+
+        if (string.Compare(text, start, word, 0, word.Length, StringComparison.OrdinalIgnoreCase) != 0)
+            return false;
+
+        var end = start + word.Length;
+        return end >= text.Length || !IsIdentifierChar(text[end]);
     }
 
     private static void AddClassTokens(List<RazorClassLiteral> literals, string value, int offset, int group)
