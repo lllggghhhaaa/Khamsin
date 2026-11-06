@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <UsingTask TaskName="Khamsin.Build.KhamsinEmitCss" AssemblyFile="$(KhamsinTaskAssembly)" />
+  <UsingTask TaskName="Khamsin.Build.KhamsinResolveConfigCss" AssemblyFile="$(KhamsinTaskAssembly)" />
 
   <Target Name="KhamsinPrepareSources" Condition="'$(KhamsinEmitCss)' == 'true'">
     <PropertyGroup>
@@ -23,6 +24,13 @@
                       Lines="minify=$(KhamsinMinify)"
                       Overwrite="true"
                       WriteOnlyWhenDifferent="true" />
+    <!--
+      The CSS list is only known after parsing khamsin.json, which MSBuild cannot do itself. The
+      task resolves those paths into items so they can participate in the target's Inputs.
+    -->
+    <KhamsinResolveConfigCss ConfigPath="$(KhamsinConfigFullPath)">
+      <Output TaskParameter="CssFiles" ItemName="_KhamsinCssInput" />
+    </KhamsinResolveConfigCss>
     <ItemGroup>
       <!--
         Generated sources in obj/ are rewritten by every build, so including them would make the
@@ -43,10 +51,11 @@
           AfterTargets="CoreCompile"
           DependsOnTargets="KhamsinPrepareSources"
           Condition="'$(KhamsinEmitCss)' == 'true' and '$(DesignTimeBuild)' != 'true'"
-          Inputs="$(IntermediateOutputPath)$(TargetFileName);$(_KhamsinSettingsPath);$(KhamsinConfigFullPath);@(_KhamsinSource);@(ReferencePath)"
+          Inputs="$(IntermediateOutputPath)$(TargetFileName);$(_KhamsinSettingsPath);$(KhamsinConfigFullPath);@(_KhamsinSource);@(ReferencePath);@(_KhamsinCssInput);@(ReferenceCopyLocalPaths)"
           Outputs="$(KhamsinCssOutputPath)">
     <KhamsinEmitCss AssemblyPath="$(IntermediateOutputPath)$(TargetFileName)"
                     ReferenceAssemblies="@(ReferencePathWithRefAssemblies)"
+                    ImplementationAssemblies="@(ReferenceCopyLocalPaths)"
                     SourceFiles="@(_KhamsinSource)"
                     ProjectDirectory="$(MSBuildProjectDirectory)"
                     ConfigPath="$(KhamsinConfigFullPath)"

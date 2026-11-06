@@ -132,6 +132,44 @@ public class BuildTaskTests
     }
 
     [Fact]
+    public void Generic_library_components_contribute_their_classes()
+    {
+        using var fixture = new BuildFixture(
+            """
+            @page "/"
+
+            <Picker Value="@("x")" />
+            """);
+
+        var result = fixture.Build();
+
+        Assert.True(result.ExitCode == 0, result.AllOutput);
+        var css = fixture.Css;
+        Assert.Contains(".bg-violet-700{", css, StringComparison.Ordinal);
+        Assert.Contains(".text-forest-600{", css, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Legacy_generic_components_fall_back_to_the_stub_manifest_and_IL_usage()
+    {
+        using var fixture = new BuildFixture(
+            """
+            @page "/"
+
+            <SampleLib.Legacy.LegacyCard Value="@("x")" />
+            """);
+
+        var result = fixture.Build();
+
+        Assert.True(result.ExitCode == 0, result.AllOutput);
+        var css = fixture.Css;
+        // The stub carries the generic component's manifest; the child is only reachable through
+        // the real generic type's IL, not through attribute Uses.
+        Assert.Contains(".bg-amber-600{", css, StringComparison.Ordinal);
+        Assert.Contains(".text-forest-600{", css, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Minification_can_be_disabled_for_debugging()
     {
         using var fixture = new BuildFixture(minify: false);

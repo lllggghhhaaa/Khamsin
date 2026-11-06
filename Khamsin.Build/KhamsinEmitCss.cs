@@ -21,6 +21,12 @@ public sealed class KhamsinEmitCss : Task
 
     public ITaskItem[] ReferenceAssemblies { get; set; } = Array.Empty<ITaskItem>();
 
+    /// <summary>
+    /// Copy-local implementation assemblies. Reference assemblies preserve manifests but strip the
+    /// IL bodies that reveal <c>OpenComponent&lt;T&gt;</c> usage, so these are scanned for usage too.
+    /// </summary>
+    public ITaskItem[] ImplementationAssemblies { get; set; } = Array.Empty<ITaskItem>();
+
     public ITaskItem[] SourceFiles { get; set; } = Array.Empty<ITaskItem>();
 
     [Required]
@@ -131,38 +137,73 @@ public sealed class KhamsinEmitCss : Task
         }
 
         var manifests = new Dictionary<string, ManifestInfo>(StringComparer.Ordinal);
+        var manifestOwners = new Dictionary<string, string>(StringComparer.Ordinal);
         var assemblyManifests = new Dictionary<string, List<ManifestInfo>>(StringComparer.OrdinalIgnoreCase);
+        var typeUsages = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
         var contributingAssemblies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var manifestOwners = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var referencedConfigs = new Dictionary<string, ConfigInfo>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var reference in ReferenceAssemblies)
+        foreach (var pair in consumer.TypeUsages)
+            AddUsages(typeUsages, pair.Key, pair.Value);
+
+        // Implementation assemblies carry the IL that reference assemblies omit. Scanning them
+        // first recovers both manifests and transitive OpenComponent<T> edges from old packages.
+        var scannedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Path.GetFullPath(AssemblyPath) };
+        var scannedAssemblies = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { consumer.AssemblyName };
+
+        void AddScan(string path, bool scanUsage)
         {
-            var path = reference.GetMetadata("FullPath");
-            if (string.IsNullOrEmpty(path) || !File.Exists(path) || PathsEqual(path, AssemblyPath))
-                continue;
+            if (string.IsNullOrEmpty(path) || !File.Exists(path) || !IsAssemblyFile(path))
+                return;
+
+            var fullPath = Path.GetFullPath(path);
+            if (!scannedPaths.Add(fullPath))
+                return;
 
             AssemblyScanResult scan;
             try
             {
-                scan = ScanCached(path);
+                scan = ScanCached(fullPath, scanUsage);
             }
             catch (Exception exception) when (exception is BadImageFormatException or IOException or UnauthorizedAccessException)
             {
-                continue;
+                return;
             }
 
-            foreach (var manifest in scan.Manifests.Where(manifest => !manifests.ContainsKey(manifest.Key)))
+            if (scan.AssemblyName.Length == 0 || !scannedAssemblies.Add(scan.AssemblyName))
+                return;
+
+            foreach (var manifest in scan.Manifests)
             {
-                manifests.Add(manifest.Key, manifest.Value);
-                manifestOwners[manifest.Key] = path;
+                // First wins: the consumer's own manifests are applied last, and implementation
+                // assemblies are scanned before the reference assemblies that mirror them.
+                if (manifests.TryAdd(manifest.Key, manifest.Value))
+                    manifestOwners[manifest.Key] = scan.AssemblyName;
             }
 
-            if (scan.AssemblyManifests.Count > 0) assemblyManifests[path] = scan.AssemblyManifests;
+            foreach (var pair in scan.TypeUsages)
+                AddUsages(typeUsages, pair.Key, pair.Value);
+
+            if (scan.AssemblyManifests.Count > 0)
+            {
+                if (!assemblyManifests.TryGetValue(scan.AssemblyName, out var assembly))
+                {
+                    assembly = [];
+                    assemblyManifests.Add(scan.AssemblyName, assembly);
+                }
+
+                assembly.AddRange(scan.AssemblyManifests);
+            }
 
             foreach (var config in scan.Configs)
                 referencedConfigs[config.AssemblyName] = config;
         }
+
+        foreach (var implementation in ImplementationAssemblies)
+            AddScan(implementation.GetMetadata("FullPath"), scanUsage: true);
+
+        foreach (var reference in ReferenceAssemblies)
+            AddScan(reference.GetMetadata("FullPath"), scanUsage: false);
 
         var engine = CreateEngine(consumer, referencedConfigs.Values);
 
@@ -180,17 +221,34 @@ public sealed class KhamsinEmitCss : Task
             if (!visited.Add(typeName))
                 continue;
 
-            if (!manifests.TryGetValue(typeName, out var manifest))
-                continue;
+            // Usage edges are recorded per declaring type, including the real generic definition
+            // when an older manifest sits on a non-generic stub.
+            if (typeUsages.TryGetValue(typeName, out var usages))
+                foreach (var use in usages)
+                    queue.Enqueue(use);
 
-            if (manifestOwners.TryGetValue(typeName, out var owner)) contributingAssemblies.Add(owner);
+            var manifestName = typeName;
+            if (!manifests.TryGetValue(typeName, out var manifest))
+            {
+                manifestName = TypeNames.StripGenericArity(typeName);
+                if (manifestName == typeName || !manifests.TryGetValue(manifestName, out manifest))
+                    continue;
+
+                if (typeUsages.TryGetValue(manifestName, out var stubUsages))
+                    foreach (var use in stubUsages)
+                        queue.Enqueue(use);
+            }
+
+            if (manifestOwners.TryGetValue(manifestName, out var owner)) contributingAssemblies.Add(owner);
 
             AddClasses(classes, manifest.Classes);
             foreach (var use in manifest.Uses.Where(use => !visited.Contains(use))) queue.Enqueue(use);
         }
 
-        foreach (var manifest in assemblyManifests.Where(pair => contributingAssemblies.Contains(pair.Key)).SelectMany(pair => pair.Value))
-            AddClasses(classes, manifest.Classes);
+        foreach (var assembly in contributingAssemblies)
+            if (assemblyManifests.TryGetValue(assembly, out var assemblyManifestList))
+                foreach (var manifest in assemblyManifestList)
+                    AddClasses(classes, manifest.Classes);
 
         foreach (var manifest in consumer.AssemblyManifests) 
             AddClasses(classes, manifest.Classes);
@@ -264,18 +322,37 @@ public sealed class KhamsinEmitCss : Task
         File.WriteAllText(OutputPath, css, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
-    private static AssemblyScanResult ScanCached(string path)
+    private static AssemblyScanResult ScanCached(string path, bool scanUsage)
     {
         var info = new FileInfo(path);
         var stamp = info.LastWriteTimeUtc.Ticks;
         var length = info.Length;
+        var key = (scanUsage ? "usage:" : "manifest:") + Path.GetFullPath(path);
 
-        if (Cache.TryGetValue(path, out var cached) && cached.Stamp == stamp && cached.Length == length)
+        if (Cache.TryGetValue(key, out var cached) && cached.Stamp == stamp && cached.Length == length)
             return cached.Scan;
 
-        var scan = AssemblyMetadataReader.Scan(path, scanUsage: false);
-        Cache[path] = new CachedScan(stamp, length, scan);
+        var scan = AssemblyMetadataReader.Scan(path, scanUsage);
+        Cache[key] = new CachedScan(stamp, length, scan);
         return scan;
+    }
+
+    private static void AddUsages(Dictionary<string, HashSet<string>> target, string typeName, HashSet<string> usages)
+    {
+        if (target.TryGetValue(typeName, out var existing))
+        {
+            existing.UnionWith(usages);
+            return;
+        }
+
+        target.Add(typeName, new HashSet<string>(usages, StringComparer.Ordinal));
+    }
+
+    private static bool IsAssemblyFile(string path)
+    {
+        var extension = Path.GetExtension(path);
+        return string.Equals(extension, ".dll", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(extension, ".exe", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void AddClasses(List<string> classes, string classList)
@@ -283,9 +360,6 @@ public sealed class KhamsinEmitCss : Task
         foreach (var token in KhamsinEngine.Tokenize(classList))
             if (!classes.Contains(token)) classes.Add(token);
     }
-
-    private static bool PathsEqual(string left, string right)
-        => string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
 
     private static bool IsIntermediate(string path)
     {

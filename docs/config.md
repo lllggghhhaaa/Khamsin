@@ -40,11 +40,12 @@ entries are **KHM005** build errors.
 
 ## CSS bundling
 
-The optional `css` list points at stylesheets (relative to the project) that ship **inside the
-generated `khamsin.css`**, in a `base` cascade layer between the theme and the utilities - so
-theme variables and hand-written rules load through the one stylesheet the app already links
-(`MapKhamsinCss()` or the static asset), with no separate `tokens.css`/`app.css` files to serve.
-Files resolve by name against the project's CSS files; the list is an incremental input too.
+The optional `css` list points at stylesheets (relative to the configuration file) that ship
+**inside the generated `khamsin.css`**, in a `base` cascade layer between the theme and the
+utilities - so theme variables and hand-written rules load through the one stylesheet the app
+already links (`MapKhamsinCss()` or the static asset), with no separate `tokens.css`/`app.css` files
+to serve. The MSBuild task resolves the list into incremental inputs, so editing or deleting a
+listed file regenerates the stylesheet even when no source file changed.
 
 ## Runtime merging
 

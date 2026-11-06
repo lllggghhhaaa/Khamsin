@@ -95,4 +95,40 @@ public class ExtractionTests
         Assert.DoesNotContain("gap-12", values);
         Assert.DoesNotContain("gap-14", values);
     }
+
+    [Fact]
+    public void Razor_typeparam_directives_include_constraints()
+    {
+        var scan = RazorSourceScanner.Scan(
+            """
+            @typeparam TValue
+            @typeparam TItem where TItem : class, new()
+            <div class="p-4">Body</div>
+            """);
+
+        Assert.Collection(
+            scan.TypeParameters,
+            parameter =>
+            {
+                Assert.Equal("TValue", parameter.Name);
+                Assert.Equal(string.Empty, parameter.Constraints);
+            },
+            parameter =>
+            {
+                Assert.Equal("TItem", parameter.Name);
+                Assert.Equal("class, new()", parameter.Constraints);
+            });
+    }
+
+    [Fact]
+    public void Typeparam_inside_a_comment_is_ignored()
+    {
+        var scan = RazorSourceScanner.Scan(
+            """
+            @* @typeparam TIgnored *@
+            <div class="p-4">Body</div>
+            """);
+
+        Assert.Empty(scan.TypeParameters);
+    }
 }

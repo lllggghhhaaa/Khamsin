@@ -68,6 +68,50 @@ public class ConfigBuildTests
     }
 
     [Fact]
+    public void Editing_a_config_css_file_regenerates_the_stylesheet()
+    {
+        using var fixture = new BuildFixture();
+        fixture.SetConfig("""{ "css": ["wwwroot/theme.css"] }""");
+        WriteAppCss(fixture, ".brand-before{color:red}");
+
+        Assert.Equal(0, fixture.Build().ExitCode);
+        Assert.Contains(".brand-before{color:red}", fixture.Css, StringComparison.Ordinal);
+
+        WriteAppCss(fixture, ".brand-after{color:blue}");
+        var rebuild = fixture.Build("normal");
+
+        Assert.Equal(0, rebuild.ExitCode);
+        Assert.Contains(".brand-after{color:blue}", fixture.Css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".brand-before", fixture.Css, StringComparison.Ordinal);
+        Assert.DoesNotContain("Skipping target \"KhamsinGenerateCss\"", rebuild.AllOutput, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Deleting_a_config_css_file_regenerates_the_stylesheet()
+    {
+        using var fixture = new BuildFixture();
+        fixture.SetConfig("""{ "css": ["wwwroot/theme.css"] }""");
+        WriteAppCss(fixture, ".brand-removed{color:red}");
+
+        Assert.Equal(0, fixture.Build().ExitCode);
+        Assert.Contains(".brand-removed{color:red}", fixture.Css, StringComparison.Ordinal);
+
+        File.Delete(Path.Combine(fixture.Root, "App", "wwwroot", "theme.css"));
+        var rebuild = fixture.Build("normal");
+
+        Assert.Equal(0, rebuild.ExitCode);
+        Assert.DoesNotContain(".brand-removed", fixture.Css, StringComparison.Ordinal);
+        Assert.DoesNotContain("Skipping target \"KhamsinGenerateCss\"", rebuild.AllOutput, StringComparison.Ordinal);
+    }
+
+    private static void WriteAppCss(BuildFixture fixture, string css)
+    {
+        var directory = Path.Combine(fixture.Root, "App", "wwwroot");
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, "theme.css"), css);
+    }
+
+    [Fact]
     public void Invalid_config_fails_the_build_with_errors()
     {
         using var fixture = new BuildFixture();

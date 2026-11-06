@@ -108,6 +108,55 @@ public sealed class ManifestGeneratorTests
     }
 
     [Fact]
+    public void Generic_component_emits_type_parameters_and_constraints()
+    {
+        const string path = @"C:\proj\Components\Picker.razor";
+        const string razor = """
+            @typeparam TValue
+            @typeparam TItem where TItem : class, new()
+            <div class="p-4">Body</div>
+            """;
+
+        var (result, _, diagnostics) = GeneratorHarness.Run(new[] { (path, razor) });
+
+        Assert.Empty(diagnostics.Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error));
+        var manifest = result.GeneratedTrees.Select(tree => tree.ToString())
+            .Single(source => source.Contains("partial class Picker", StringComparison.Ordinal));
+        Assert.Contains("public partial class Picker<TValue, TItem> where TItem : class, new()", manifest, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Generic_components_are_referenced_as_open_generic_types()
+    {
+        var extra = GeneratorHarness.Components + """
+
+            namespace Sample.Components
+            {
+                public partial class GenericChild<T> : global::Microsoft.AspNetCore.Components.ComponentBase { }
+            }
+            """;
+
+        var files = new[]
+        {
+            (@"C:\proj\Components\Picker.razor", """
+                @typeparam TValue
+                <div class="p-2">Body</div>
+                """),
+            (@"C:\proj\Components\Host.razor", """
+                <Picker />
+                <GenericChild />
+                """),
+        };
+
+        var (result, _, _) = GeneratorHarness.Run(files, extra);
+
+        var host = result.GeneratedTrees.Select(tree => tree.ToString())
+            .Single(source => source.Contains("partial class Host", StringComparison.Ordinal));
+        Assert.Contains("typeof(global::Sample.Components.Picker<>)", host, StringComparison.Ordinal);
+        Assert.Contains("typeof(global::Sample.Components.GenericChild<>)", host, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Assembly_manifest_carries_kx_literals_from_helper_classes()
     {
         var extra = "using Khamsin;\n" + GeneratorHarness.Components + """

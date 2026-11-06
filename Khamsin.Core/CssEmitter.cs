@@ -22,10 +22,11 @@ public static class CssEmitter
         var animations = UsedAnimations(classes, theme);
 
         var builder = new StringBuilder(minify ? 4096 : 8192);
+        var properties = includeTheme ? InternalProperties(theme) : [];
         if (minify)
-            EmitMinified(builder, rules, theme, includeTheme);
+            EmitMinified(builder, rules, theme, includeTheme, properties);
         else
-            EmitReadable(builder, rules, theme, includeTheme);
+            EmitReadable(builder, rules, theme, includeTheme, properties);
 
         AppendCustomCss(builder, customCss, minify);
         AppendKeyframes(builder, animations, theme, minify);
@@ -107,7 +108,8 @@ public static class CssEmitter
         }
     }
 
-    private static void EmitMinified(StringBuilder builder, List<CssRule> rules, Theme theme, bool includeTheme)
+    private static void EmitMinified(
+        StringBuilder builder, List<CssRule> rules, Theme theme, bool includeTheme, List<string> properties)
     {
         if (includeTheme)
         {
@@ -123,6 +125,8 @@ public static class CssEmitter
 
             builder.Append("}}");
             AppendPreflightMinified(builder);
+            foreach (var property in properties)
+                builder.Append("@property ").Append(property).Append("{syntax:\"*\";inherits:false}");
         }
 
         builder.Append("@layer utilities{");
@@ -130,7 +134,8 @@ public static class CssEmitter
         builder.Append('}');
     }
 
-    private static void EmitReadable(StringBuilder builder, List<CssRule> rules, Theme theme, bool includeTheme)
+    private static void EmitReadable(
+        StringBuilder builder, List<CssRule> rules, Theme theme, bool includeTheme, List<string> properties)
     {
         if (includeTheme)
         {
@@ -144,11 +149,81 @@ public static class CssEmitter
             builder.Append("  }\n");
             builder.Append("}\n\n");
             AppendPreflightReadable(builder);
+            AppendPropertiesReadable(builder, properties);
         }
 
         builder.Append("@layer utilities {\n");
         WriteReadableRules(builder, rules);
         builder.Append('}');
+    }
+
+    /// <summary>
+    /// Registers Khamsin's internal composition variables as non-inheriting. Without this, a
+    /// translate/filter/mask variable set on a parent leaks into every child that reads the same
+    /// name; <c>var(..., fallback)</c> only helps when the property was never set anywhere.
+    /// </summary>
+    private static void AppendPropertiesReadable(StringBuilder builder, List<string> properties)
+    {
+        foreach (var property in properties)
+        {
+            builder.Append("@property ").Append(property).Append(" {\n");
+            builder.Append("  syntax: \"*\";\n");
+            builder.Append("  inherits: false;\n");
+            builder.Append("}\n\n");
+        }
+    }
+
+    /// <summary>
+    /// Collects the internal <c>--khamsin-*</c> variables from the declarative utility table and
+    /// the theme's animation keyframes, so the registered set never drifts from emitted CSS.
+    /// </summary>
+    private static List<string> InternalProperties(Theme theme)
+    {
+        var names = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (var entry in BuiltInUtilities.Create(theme))
+        {
+            CollectVariableNames(entry.Template, names);
+            CollectVariableNames(entry.ArbitraryTemplate, names);
+            if (entry.Values is not null)
+                foreach (var value in entry.Values.Values)
+                    CollectVariableNames(value, names);
+
+            if (entry.Keywords is not null)
+                foreach (var value in entry.Keywords.Values)
+                    CollectVariableNames(value, names);
+        }
+
+        foreach (var animation in theme.Animations.Values)
+        {
+            CollectVariableNames(animation.Value, names);
+            foreach (var frame in animation.Keyframes)
+                CollectVariableNames(frame.Value, names);
+        }
+
+        return [.. names];
+    }
+
+    private static void CollectVariableNames(string? text, ISet<string> names)
+    {
+        const string prefix = "--khamsin-";
+        if (text is null || text.Length == 0)
+            return;
+
+        var index = 0;
+        while (index < text.Length)
+        {
+            var start = text.IndexOf(prefix, index, StringComparison.Ordinal);
+            if (start < 0)
+                return;
+
+            var end = start + prefix.Length;
+            while (end < text.Length && (char.IsLetterOrDigit(text[end]) || text[end] is '-' or '_')) end++;
+
+            if (end > start + prefix.Length)
+                names.Add(text.Substring(start, end - start));
+
+            index = end;
+        }
     }
 
     /// <summary>

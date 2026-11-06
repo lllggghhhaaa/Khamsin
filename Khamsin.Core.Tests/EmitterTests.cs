@@ -173,6 +173,54 @@ public class EmitterTests
     }
 
     [Fact]
+    public void Internal_composition_variables_are_registered_as_non_inheriting()
+    {
+        var css = CssEmitter.Emit(Array.Empty<ParsedClass>(), Theme.Default);
+
+        Assert.Contains("@property --khamsin-translate-x{syntax:\"*\";inherits:false}", css);
+        Assert.Contains("@property --khamsin-translate-y{syntax:\"*\";inherits:false}", css);
+        Assert.Contains("@property --khamsin-ring-color{syntax:\"*\";inherits:false}", css);
+        Assert.Contains("@property --khamsin-mask-top{syntax:\"*\";inherits:false}", css);
+        Assert.Contains("@property --khamsin-enter-opacity{syntax:\"*\";inherits:false}", css);
+        Assert.Contains("@property --khamsin-blur{syntax:\"*\";inherits:false}", css);
+    }
+
+    [Fact]
+    public void Property_registrations_are_sorted_and_unique()
+    {
+        var css = CssEmitter.Emit(Array.Empty<ParsedClass>(), Theme.Default);
+        var names = new List<string>();
+        var index = 0;
+        while ((index = css.IndexOf("@property ", index, StringComparison.Ordinal)) >= 0)
+        {
+            var start = index + "@property ".Length;
+            var end = css.IndexOf('{', start);
+            names.Add(css.Substring(start, end - start));
+            index = end;
+        }
+
+        Assert.NotEmpty(names);
+        Assert.Equal(names.Count, names.Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(names.OrderBy(name => name, StringComparer.Ordinal), names);
+    }
+
+    [Fact]
+    public void Utilities_only_output_omits_property_registrations()
+    {
+        var css = CssEmitter.Emit(Array.Empty<ParsedClass>(), Theme.Default, includeTheme: false);
+
+        Assert.DoesNotContain("@property", css);
+    }
+
+    [Fact]
+    public void Readable_property_registrations_are_indented()
+    {
+        var css = CssEmitter.Emit(Array.Empty<ParsedClass>(), Theme.Default, minify: false);
+
+        Assert.Contains("@property --khamsin-translate-x {\n  syntax: \"*\";\n  inherits: false;\n}\n\n", css);
+    }
+
+    [Fact]
     public void Readable_output_indents_rules_and_declarations()
     {
         var css = Readable("p-4", "border", "md:flex");

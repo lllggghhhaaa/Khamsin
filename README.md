@@ -45,7 +45,9 @@ The package carries the runtime (`lib/net8.0`), the analyzer and manifest genera
 libraries get manifests, the executable or web project gets the stylesheet.
 
 The generated stylesheet also bundles the theme, a Tailwind-compatible preflight, and any CSS listed
-under `css` in `khamsin.json`, including stylesheets contributed by referenced libraries.
+under `css` in `khamsin.json`, including stylesheets contributed by referenced libraries. Listed
+stylesheets are incremental inputs: editing or deleting one regenerates the stylesheet even when no
+source file changed.
 
 Serve the generated file like any other static asset:
 
@@ -64,13 +66,24 @@ app.MapKhamsinCss();
 
 1. The source generator reads `.razor` files as `AdditionalFiles` and emits a
    `[KhamsinManifest(Classes = "…", Uses = new[] { typeof(A) })]` part for every component, plus one
-   assembly-level manifest for `Kx` literals in helper classes.
+   assembly-level manifest for `Kx` literals in helper classes. Generic components (`@typeparam`)
+   keep their manifest on the real generic type and are referenced as open generics such as
+   `typeof(Picker<>)`.
 2. After `CoreCompile`, the MSBuild task opens the consumer assembly and finds the components it
-   renders through `RenderTreeBuilder.OpenComponent<T>` metadata.
-3. It follows each component's `Uses` transitively through referenced assemblies, adds the
-   consumer's own sources, and writes `obj/<configuration>/<tfm>/khamsin.css` containing only those
-   classes. Components from a library that the app never renders contribute nothing.
+   renders through `RenderTreeBuilder.OpenComponent<T>` metadata. It also scans copy-local
+   implementation assemblies, because reference assemblies omit method bodies; this recovers
+   manifests and component edges from packages, including older packages whose generic components
+   carry manifests on a non-generic stub.
+3. It follows each component's `Uses` transitively through referenced assemblies, supplemented by
+   per-type `OpenComponent<T>` edges read from IL, adds the consumer's own sources, and writes
+   `obj/<configuration>/<tfm>/khamsin.css` containing only those classes. Components from a library
+   that the app never renders contribute nothing.
 4. The file is registered as a static web asset (and copied to the output for other project types).
+
+The generated theme also registers Khamsin's internal `--khamsin-*` composition variables with
+`@property { syntax: "*"; inherits: false }`. A transform, filter or mask set on a parent therefore
+does not leak into descendants that compose the same variable; a `var(…, fallback)` alone cannot
+prevent inheritance once the variable is set.
 
 Output is minified by default. Setting `KhamsinMinify` to `false` writes indented CSS with one
 declaration per line; the class set and ordering are identical in both forms.

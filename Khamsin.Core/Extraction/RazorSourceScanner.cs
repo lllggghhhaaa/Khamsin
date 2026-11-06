@@ -6,6 +6,9 @@ public sealed record RazorComponentTag(string Name, int Offset);
 
 public sealed record RazorNonLiteralUsage(int Offset, int Length);
 
+/// <summary>A <c>@typeparam</c> directive and its optional <c>where</c> constraint clause.</summary>
+public sealed record RazorTypeParameter(string Name, string Constraints);
+
 /// <summary>Facts extracted from a <c>.razor</c> file without invoking the Razor compiler.</summary>
 public sealed class RazorScanResult
 {
@@ -15,7 +18,8 @@ public sealed class RazorScanResult
         IReadOnlyList<RazorClassLiteral> literals,
         IReadOnlyList<RazorClassLiteral> authorLiterals,
         IReadOnlyList<RazorComponentTag> usedComponents,
-        IReadOnlyList<RazorNonLiteralUsage> nonLiteralUsages)
+        IReadOnlyList<RazorNonLiteralUsage> nonLiteralUsages,
+        IReadOnlyList<RazorTypeParameter> typeParameters)
     {
         NamespaceOverride = namespaceOverride;
         Imports = imports;
@@ -23,6 +27,7 @@ public sealed class RazorScanResult
         AuthorLiterals = authorLiterals;
         UsedComponents = usedComponents;
         NonLiteralUsages = nonLiteralUsages;
+        TypeParameters = typeParameters;
     }
 
     public string? NamespaceOverride { get; }
@@ -41,6 +46,9 @@ public sealed class RazorScanResult
     public IReadOnlyList<RazorComponentTag> UsedComponents { get; }
 
     public IReadOnlyList<RazorNonLiteralUsage> NonLiteralUsages { get; }
+
+    /// <summary><c>@typeparam</c> directives in source order; empty for non-generic components.</summary>
+    public IReadOnlyList<RazorTypeParameter> TypeParameters { get; }
 }
 
 /// <summary>
@@ -62,9 +70,11 @@ public static class RazorSourceScanner
         var nonLiteral = new List<RazorNonLiteralUsage>();
         var components = new List<RazorComponentTag>();
         var imports = new List<string>();
+        var typeParameters = new List<RazorTypeParameter>();
         string? namespaceOverride = null;
 
         ScanDirectives(blanked, imports, ref namespaceOverride);
+        ScanTypeParameters(blanked, typeParameters);
         ScanKhamsinAttributes(blanked, literals, nonLiteral);
         ScanClassAttributes(text, authorLiterals);
         ScanComponentTags(blanked, components);
@@ -82,7 +92,77 @@ public static class RazorSourceScanner
             AddClassTokens(literals, literal.Value, literal.Offset, 3_000_000 + group % 100_000);
         }
 
-        return new RazorScanResult(namespaceOverride, imports, literals, authorLiterals, components, nonLiteral);
+        return new RazorScanResult(
+            namespaceOverride, imports, literals, authorLiterals, components, nonLiteral, typeParameters);
+    }
+
+    /// <summary>
+    /// Reads <c>@typeparam T</c> directives, including an inline constraint such as
+    /// <c>@typeparam T where T : class, new()</c>. The generator repeats them on its manifest part so
+    /// generic components get a manifest on the real generic type instead of a non-generic stub.
+    /// </summary>
+    private static void ScanTypeParameters(string text, List<RazorTypeParameter> parameters)
+    {
+        var index = 0;
+        while (index < text.Length)
+        {
+            var at = text.IndexOf('@', index);
+            if (at < 0)
+                return;
+
+            if (!MatchesWord(text, at + 1, "typeparam"))
+            {
+                index = at + 1;
+                continue;
+            }
+
+            var cursor = SkipWhitespace(text, at + "@typeparam".Length);
+            var start = cursor;
+            while (cursor < text.Length && (char.IsLetterOrDigit(text[cursor]) || text[cursor] == '_')) cursor++;
+
+            if (cursor == start || char.IsDigit(text[start]))
+            {
+                index = Math.Max(cursor, at + 1);
+                continue;
+            }
+
+            var name = text.Substring(start, cursor - start);
+            var lineEnd = text.IndexOf('\n', cursor);
+            if (lineEnd < 0) lineEnd = text.Length;
+
+            var rest = text.Substring(cursor, lineEnd - cursor).TrimEnd('\r');
+            parameters.Add(new RazorTypeParameter(name, ParseConstraints(rest, name)));
+            index = lineEnd < text.Length ? lineEnd + 1 : text.Length;
+        }
+    }
+
+    private static string ParseConstraints(string rest, string name)
+    {
+        var text = rest.Trim();
+        if (!text.StartsWith("where", StringComparison.Ordinal))
+            return string.Empty;
+
+        var cursor = "where".Length;
+        if (cursor < text.Length && !char.IsWhiteSpace(text[cursor]))
+            return string.Empty;
+
+        cursor = SkipWhitespace(text, cursor);
+        var start = cursor;
+        while (cursor < text.Length && (char.IsLetterOrDigit(text[cursor]) || text[cursor] == '_')) cursor++;
+
+        if (cursor == start || !string.Equals(text.Substring(start, cursor - start), name, StringComparison.Ordinal))
+            return string.Empty;
+
+        cursor = SkipWhitespace(text, cursor);
+        if (cursor >= text.Length || text[cursor] != ':')
+            return string.Empty;
+
+        var constraint = text.Substring(cursor + 1);
+        var comment = constraint.IndexOf("//", StringComparison.Ordinal);
+        if (comment >= 0) constraint = constraint.Substring(0, comment);
+
+        var parts = constraint.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        return string.Join(" ", parts);
     }
 
     private static void ScanDirectives(string text, List<string> imports, ref string? namespaceOverride)

@@ -29,6 +29,7 @@ internal static class AssemblyMetadataReader
 
         var reader = peReader.GetMetadataReader();
         ReadAssemblyAttributes(reader, result);
+        var khamsinRelated = IsKhamsinRelated(reader, result.AssemblyName);
 
         foreach (var typeHandle in reader.TypeDefinitions)
         {
@@ -54,16 +55,50 @@ internal static class AssemblyMetadataReader
                 }
             }
 
-            if (scanUsage) ScanTypeUsage(peReader, reader, type, result.UsedComponents);
+            if (scanUsage && khamsinRelated)
+            {
+                var usages = new HashSet<string>(StringComparer.Ordinal);
+                ScanTypeUsage(peReader, reader, type, usages);
+                if (usages.Count > 0)
+                {
+                    var typeName = TypeNames.FromDefinition(reader, typeHandle);
+                    if (result.TypeUsages.TryGetValue(typeName, out var existing))
+                        existing.UnionWith(usages);
+                    else
+                        result.TypeUsages.Add(typeName, usages);
+
+                    result.UsedComponents.UnionWith(usages);
+                }
+            }
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// IL usage scanning is only useful for assemblies that carry Khamsin manifests; skipping
+    /// everything else keeps scanning <c>ReferenceCopyLocalPaths</c> inexpensive.
+    /// </summary>
+    private static bool IsKhamsinRelated(MetadataReader reader, string assemblyName)
+    {
+        if (assemblyName.StartsWith("Khamsin", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        foreach (var handle in reader.AssemblyReferences)
+        {
+            var name = reader.GetString(reader.GetAssemblyReference(handle).Name);
+            if (name.StartsWith("Khamsin", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     private static void ReadAssemblyAttributes(MetadataReader reader, AssemblyScanResult result)
     {
         var assembly = reader.GetAssemblyDefinition();
         var assemblyName = reader.GetString(assembly.Name);
+        result.AssemblyName = assemblyName;
         foreach (var handle in assembly.GetCustomAttributes())
         {
             var manifest = ReadManifest(reader, handle);
@@ -316,8 +351,8 @@ internal static class AssemblyMetadataReader
         if (arguments.Length == 0)
             return;
 
-        var component = arguments[0];
-        if (component.Length > 0 && component.IndexOf('<') < 0) used.Add(component);
+        var component = TypeNames.ToDefinitionName(arguments[0]);
+        if (component.Length > 0) used.Add(component);
     }
 
     private static int ReadInt32(ImmutableArray<byte> bytes, int offset)
@@ -435,19 +470,73 @@ internal static class TypeNames
             _ => string.Empty
         };
 
-    internal static string? CleanAttributeTypeName(string? value)
+    /// <summary>
+    /// Normalizes an attribute or signature type name to its metadata definition name. Closed
+    /// generics become their <c>`N</c> definitions (<c>Foo&lt;Bar&gt;</c> and
+    /// <c>Foo`1[[Bar, ...]]</c> both become <c>Foo`1</c>), and assembly qualification is removed.
+    /// </summary>
+    internal static string ToDefinitionName(string? value)
     {
         if (string.IsNullOrEmpty(value))
-            return null;
+            return string.Empty;
 
-        var comma = value.IndexOf(',');
-        var name = (comma < 0 ? value : value[..comma]).Trim();
+        var name = value.Trim();
         if (name.StartsWith("global::", StringComparison.Ordinal)) name = name[8..];
 
-        if (name.Length == 0 || name.Contains('`') || name.Contains('['))
-            return null;
+        var end = 0;
+        while (end < name.Length && name[end] is not (',' or '[' or '<')) end++;
 
-        return name;
+        var core = name[..end].Trim();
+        if (core.Length == 0)
+            return string.Empty;
+
+        // Signature-style names (Foo<Bar>) do not carry the metadata arity suffix.
+        if (end < name.Length && name[end] == '<' && core.IndexOf('`') < 0)
+            core += "`" + CountGenericArguments(name, end + 1);
+
+        return core;
+    }
+
+    /// <summary>
+    /// Removes the generic arity suffix from the final segment, turning <c>Foo`2</c> into
+    /// <c>Foo</c>. Older Khamsin generators emitted manifests on non-generic stubs, so traversal
+    /// falls back to this name when it cannot find the real generic definition.
+    /// </summary>
+    internal static string StripGenericArity(string name)
+    {
+        var start = name.LastIndexOf('+') + 1;
+        var tick = name.IndexOf('`', start);
+        return tick < 0 ? name : name[..tick];
+    }
+
+    private static int CountGenericArguments(string name, int start)
+    {
+        var depth = 1;
+        var count = 1;
+        for (var i = start; i < name.Length; i++)
+        {
+            switch (name[i])
+            {
+                case '<':
+                    depth++;
+                    break;
+                case '>':
+                    depth--;
+                    if (depth == 0) return count;
+                    break;
+                case ',' when depth == 1:
+                    count++;
+                    break;
+            }
+        }
+
+        return count;
+    }
+
+    internal static string? CleanAttributeTypeName(string? value)
+    {
+        var name = ToDefinitionName(value);
+        return name.Length == 0 ? null : name;
     }
 }
 

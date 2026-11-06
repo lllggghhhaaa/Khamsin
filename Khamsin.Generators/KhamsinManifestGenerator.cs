@@ -213,7 +213,7 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
 
         allImports.Add("Microsoft.AspNetCore.Components");
         var razorTypes = new HashSet<string>(StringComparer.Ordinal);
-        var projectComponents = new Dictionary<string, string>(StringComparer.Ordinal);
+        var projectComponents = new Dictionary<string, ProjectComponent>(StringComparer.Ordinal);
         foreach (var (file, scan) in scans)
         {
             var name = Path.GetFileNameWithoutExtension(file.Path);
@@ -221,7 +221,8 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
                 continue;
 
             var ns = ComputeNamespace(file.Path, scan.NamespaceOverride, inputs.Settings);
-            if (!projectComponents.ContainsKey(name)) projectComponents.Add(name, Combine(ns, name));
+            if (!projectComponents.ContainsKey(name))
+                projectComponents.Add(name, new ProjectComponent(Combine(ns, name), scan.TypeParameters.Count));
         }
 
         var assemblyClasses = new List<string>();
@@ -250,12 +251,13 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
 
             var uses = ResolveComponents(context, inputs.Compilation, scan.UsedComponents, namespaceName, allImports, projectComponents, file);
 
-            var accessibility = kx?.Accessibility ?? AccessibilityFromCompilation(inputs.Compilation, fullName) ?? "public";
+            var metadataName = OpenGenericMetadataName(fullName, scan.TypeParameters.Count);
+            var accessibility = kx?.Accessibility ?? AccessibilityFromCompilation(inputs.Compilation, metadataName) ?? "public";
 
             if (!IsExtendable(accessibility))
                 continue;
 
-            EmitComponent(context, fullName, namespaceName, className, accessibility, classes, uses);
+            EmitComponent(context, fullName, namespaceName, className, accessibility, classes, uses, scan.TypeParameters);
         }
 
         foreach (var fullName in kxOrder)
@@ -274,7 +276,7 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
             var separator = fullName.LastIndexOf('.');
             var namespaceName = separator < 0 ? string.Empty : fullName.Substring(0, separator);
             var className = separator < 0 ? fullName : fullName.Substring(separator + 1);
-            EmitComponent(context, fullName, namespaceName, className, kx.Accessibility, kx.Classes, []);
+            EmitComponent(context, fullName, namespaceName, className, kx.Accessibility, kx.Classes, [], []);
         }
 
         if (assemblyClasses.Count <= 0) return;
@@ -352,7 +354,7 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
         IReadOnlyList<RazorComponentTag> tags,
         string namespaceName,
         IReadOnlyCollection<string> imports,
-        IReadOnlyDictionary<string, string> projectComponents,
+        IReadOnlyDictionary<string, ProjectComponent> projectComponents,
         RazorInput file)
     {
         if (tags.Count == 0)
@@ -361,10 +363,10 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
         var uses = new List<string>();
         foreach (var tag in tags)
         {
-            var type = ResolveTag(compilation, tag.Name, namespaceName, imports, projectComponents, out var projectTypeName);
-            if (projectTypeName is not null)
+            var type = ResolveTag(compilation, tag.Name, namespaceName, imports, projectComponents, out var projectComponent);
+            if (projectComponent is not null)
             {
-                AddDistinct(uses, "global::" + projectTypeName);
+                AddDistinct(uses, "global::" + OpenGenericName(projectComponent.FullName, projectComponent.Arity));
                 continue;
             }
 
@@ -377,13 +379,9 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
                 continue;
             }
 
-            if (type.IsGenericType || type.Arity > 0)
-            {
-                // Open generic components cannot be represented as typeof(T) in an attribute.
-                continue;
-            }
-
-            AddDistinct(uses, type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+            AddDistinct(uses, type.Arity > 0
+                ? type.ConstructUnboundGenericType().ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                : type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
         }
 
         return uses;
@@ -394,31 +392,75 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
         string tag,
         string namespaceName,
         IReadOnlyCollection<string> imports,
-        IReadOnlyDictionary<string, string> projectComponents,
-        out string? projectTypeName)
+        IReadOnlyDictionary<string, ProjectComponent> projectComponents,
+        out ProjectComponent? projectComponent)
     {
-        projectTypeName = null;
+        projectComponent = null;
         if (tag.IndexOf('.') >= 0)
         {
             if (projectComponents.TryGetValue(tag, out var exact))
             {
-                projectTypeName = exact;
+                projectComponent = exact;
                 return null;
             }
 
-            var qualified = compilation.GetTypeByMetadataName(tag);
-            return IsComponent(qualified) ? qualified : null;
+            return FindComponent(compilation, tag);
         }
 
         if (projectComponents.TryGetValue(tag, out var projectType))
         {
-            projectTypeName = projectType;
+            projectComponent = projectType;
             return null;
         }
 
-        return CandidateNamespaces(namespaceName, imports)
-            .Select(candidateNamespace => candidateNamespace.Length == 0 ? tag : candidateNamespace + "." + tag)
-            .Select(compilation.GetTypeByMetadataName).FirstOrDefault(IsComponent);
+        foreach (var candidateNamespace in CandidateNamespaces(namespaceName, imports))
+        {
+            var candidate = candidateNamespace.Length == 0 ? tag : candidateNamespace + "." + tag;
+            var type = FindComponent(compilation, candidate);
+            if (type is not null)
+                return type;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Resolves a metadata name to a component, trying generic arities because Razor tags omit the
+    /// <c>`N</c> suffix that metadata names carry.
+    /// </summary>
+    private static INamedTypeSymbol? FindComponent(Compilation compilation, string metadataName)
+    {
+        var exact = compilation.GetTypeByMetadataName(metadataName);
+        if (IsComponent(exact))
+            return exact;
+
+        for (var arity = 1; arity <= 8; arity++)
+        {
+            var candidate = compilation.GetTypeByMetadataName(metadataName + "`" + arity);
+            if (IsComponent(candidate))
+                return candidate;
+        }
+
+        return null;
+    }
+
+    private static string OpenGenericName(string fullName, int arity)
+        => arity == 0 ? fullName : fullName + "<" + new string(',', arity - 1) + ">";
+
+    private static string OpenGenericMetadataName(string fullName, int arity)
+        => arity == 0 ? fullName : fullName + "`" + arity;
+
+    private sealed class ProjectComponent
+    {
+        internal ProjectComponent(string fullName, int arity)
+        {
+            FullName = fullName;
+            Arity = arity;
+        }
+
+        internal string FullName { get; }
+
+        internal int Arity { get; }
     }
 
     private static IEnumerable<string> CandidateNamespaces(string namespaceName, IReadOnlyCollection<string> imports)
@@ -628,7 +670,8 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
         string className,
         string accessibility,
         IEnumerable<string> classes,
-        IEnumerable<string> uses)
+        IEnumerable<string> uses,
+        IReadOnlyList<RazorTypeParameter> typeParameters)
     {
         var classList = string.Join(" ", classes);
         var useList = uses.ToList();
@@ -653,7 +696,29 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
         }
 
         source.AppendLine(")]");
-        source.Append("    ").Append(accessibility).Append(" partial class ").Append(className).AppendLine(" { }");
+        source.Append("    ").Append(accessibility).Append(" partial class ").Append(className);
+        if (typeParameters.Count > 0)
+        {
+            source.Append('<');
+            for (var i = 0; i < typeParameters.Count; i++)
+            {
+                if (i > 0) source.Append(", ");
+
+                source.Append(typeParameters[i].Name);
+            }
+
+            source.Append('>');
+
+            foreach (var parameter in typeParameters)
+            {
+                if (parameter.Constraints.Length == 0)
+                    continue;
+
+                source.Append(" where ").Append(parameter.Name).Append(" : ").Append(parameter.Constraints);
+            }
+        }
+
+        source.AppendLine(" { }");
         if (namespaceName.Length > 0) source.AppendLine("}");
 
         context.AddSource(HintName(fullName), SourceText.From(source.ToString(), Encoding.UTF8));

@@ -229,6 +229,59 @@ internal sealed class BuildFixture : IDisposable
             @inherits KhamsinComponentBase
             <section class="tracking-widest bg-rose-700">Never rendered by the app.</section>
             """);
+
+        File.WriteAllText(Path.Combine(components, "Picker.razor"), """
+            @typeparam TValue where TValue : class
+            @inherits KhamsinComponentBase
+            <section class="@(Defaults + Khamsin)">
+                <span class="text-forest-600">Picker</span>
+            </section>
+
+            @code {
+                private static readonly KhamsinClass Defaults = "bg-violet-700 text-white";
+
+                [Parameter]
+                public TValue Value { get; set; } = default!;
+            }
+            """);
+
+        // Simulates an older package whose generic component never got a manifest of its own:
+        // the generated manifest sits on a non-generic stub, and the child is only discoverable
+        // through the generic type's IL.
+        File.WriteAllText(Path.Combine(Root, "Lib", "Legacy.cs"), """
+            using Khamsin;
+            using Microsoft.AspNetCore.Components;
+            using Microsoft.AspNetCore.Components.Rendering;
+
+            namespace SampleLib.Legacy
+            {
+                [KhamsinManifest(Classes = "bg-amber-600")]
+                public sealed class LegacyCard
+                {
+                }
+
+                public sealed class LegacyCard<TValue> : ComponentBase
+                {
+                    [Parameter]
+                    public TValue Value { get; set; } = default!;
+
+                    protected override void BuildRenderTree(RenderTreeBuilder builder)
+                    {
+                        builder.OpenComponent<LegacyBadge>(0);
+                        builder.CloseComponent();
+                    }
+                }
+
+                [KhamsinManifest(Classes = "text-forest-600")]
+                public sealed class LegacyBadge : ComponentBase
+                {
+                    protected override void BuildRenderTree(RenderTreeBuilder builder)
+                    {
+                        builder.AddContent(0, "badge");
+                    }
+                }
+            }
+            """);
     }
 
     private void WriteApp(string? homeMarkup)
