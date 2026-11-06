@@ -104,6 +104,25 @@ public class ConfigBuildTests
         Assert.DoesNotContain("Skipping target \"KhamsinGenerateCss\"", rebuild.AllOutput, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Library_css_from_wwwroot_reaches_the_app_stylesheet()
+    {
+        using var fixture = new BuildFixture(homeMarkup: """
+            @page "/"
+
+            <Card>Body</Card>
+            """);
+        fixture.SetLibraryConfig("""{ "css": ["wwwroot/card.css"] }""");
+
+        var directory = Path.Combine(fixture.Root, "Lib", "wwwroot");
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, "card.css"), ".card-bundled{color:green}");
+
+        var result = fixture.Build();
+        Assert.True(result.ExitCode == 0, result.AllOutput);
+        Assert.Contains(".card-bundled{color:green}", fixture.Css, StringComparison.Ordinal);
+    }
+
     private static void WriteAppCss(BuildFixture fixture, string css)
     {
         var directory = Path.Combine(fixture.Root, "App", "wwwroot");

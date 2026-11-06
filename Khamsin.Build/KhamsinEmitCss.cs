@@ -292,7 +292,7 @@ public sealed class KhamsinEmitCss : Task
     private static string CollectCustomCss(
         AssemblyScanResult consumer, IEnumerable<ConfigInfo> referencedConfigs)
     {
-        var builder = new System.Text.StringBuilder();
+        var builder = new StringBuilder();
         foreach (var config in referencedConfigs)
             if (!string.IsNullOrWhiteSpace(config.Css))
                 builder.AppendLine(config.Css);

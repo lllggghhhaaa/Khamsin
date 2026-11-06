@@ -9,7 +9,7 @@
     <!-- The task assemblies intentionally live under tasks/, not lib/. -->
     <NoWarn>$(NoWarn);NU5100;NU5128</NoWarn>
     <PackageId>Khamsin</PackageId>
-    <Version>0.3.0</Version>
+    <Version>0.3.2</Version>
     <Authors>lllggghhhaaa</Authors>
     <Copyright>Copyright (c) 2026 Khamsin contributors</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>

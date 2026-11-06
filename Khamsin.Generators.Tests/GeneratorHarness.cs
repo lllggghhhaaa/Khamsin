@@ -182,7 +182,7 @@ namespace Sample.Components
     /// <summary>Compiles a tiny assembly that carries a <c>KhamsinConfigAttribute</c>.</summary>
     internal static MetadataReference CreateAssemblyWithConfig(string assemblyName, string json)
     {
-        var literal = Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(json, quote: true);
+        var literal = SymbolDisplay.FormatLiteral(json, quote: true);
         var source = $$"""
             [assembly: global::Khamsin.KhamsinConfigAttribute(Json = {{literal}})]
             public static class ConfigMarker { }

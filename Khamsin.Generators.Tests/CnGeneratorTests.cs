@@ -35,7 +35,7 @@ public class CnGeneratorTests
             }
             """;
 
-        var (result, _, _) = GeneratorHarness.Run(System.Array.Empty<(string, string)>(), extra);
+        var (result, _, _) = GeneratorHarness.Run(Array.Empty<(string, string)>(), extra);
         var manifest = Generated(result, "Panel.Khamsin.g.cs");
         Assert.Contains("p-4", manifest);
         Assert.Contains("bg-forest-600", manifest);
@@ -57,7 +57,7 @@ public class CnGeneratorTests
             }
             """;
 
-        var (result, _, _) = GeneratorHarness.Run(System.Array.Empty<(string, string)>(), extra);
+        var (result, _, _) = GeneratorHarness.Run(Array.Empty<(string, string)>(), extra);
         var manifest = Generated(result, "Row.Khamsin.g.cs");
         Assert.Contains("p-4", manifest);
         Assert.Contains("rounded-lg", manifest);
@@ -67,8 +67,6 @@ public class CnGeneratorTests
     [Fact]
     public void Cn_literals_feed_the_manifest_not_the_diagnostic_paths()
     {
-        // Unknown classes inside Cn calls are the analyzer's KHM002 concern; the generator's
-        // razor-scan path must not double-report them (groups above KxGroupBase are skipped).
         const string razor = """<div Khamsin="@(Cn.Of("p-4 shadow-huge"))">Home</div>""";
 
         var (_, _, diagnostics) = GeneratorHarness.Run([(RazorPath, razor)]);

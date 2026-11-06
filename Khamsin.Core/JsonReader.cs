@@ -165,7 +165,7 @@ internal static class JsonReader
         {
             Position++; // '{'
             var members = new List<KeyValuePair<string, JsonValue>>();
-            var seen = new HashSet<string>(System.StringComparer.Ordinal);
+            var seen = new HashSet<string>(StringComparer.Ordinal);
             SkipWhitespace();
             if (Peek() == '}')
             {

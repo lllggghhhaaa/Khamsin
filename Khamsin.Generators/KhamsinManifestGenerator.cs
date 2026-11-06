@@ -70,7 +70,6 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
             .Combine(configInput)
             .Select(static (input, _) =>
             {
-                // input.Right = config; input.Left.Right = compilation; input.Left.Left.Right = settings.
                 var razor = input.Left.Left.Left.Left.Left;
                 var kx = input.Left.Left.Left.Left.Right;
                 var literals = input.Left.Left.Left.Right;
@@ -96,7 +95,6 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
             if (!IsConfigFilePath(file.Path, name))
                 continue;
 
-            // Deterministic pick when several files share the configured name.
             if (match is null || string.CompareOrdinal(file.Path, match.Path) < 0)
                 match = file;
         }
@@ -111,26 +109,11 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
         if (!KhamsinConfig.TryParse(text, out var config, out var errors))
             return ConfigInput.From(null, [.. errors], match.Path, text);
 
-        // Resolve the config's CSS file paths against the AdditionalTexts and embed the content.
-        if (config is not null && config.CssFiles is { Count: > 0 })
+        if (config is not null)
         {
-            var builder = new System.Text.StringBuilder();
-            foreach (var cssPath in config.CssFiles)
-            {
-                var fileName = System.IO.Path.GetFileName(cssPath);
-                foreach (var file in additionalFiles)
-                {
-                    if (!string.Equals(System.IO.Path.GetFileName(file.Path), fileName, StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    if (file.GetText() is { } cssText)
-                        builder.AppendLine(cssText.ToString());
-                    break;
-                }
-            }
-
-            if (builder.Length > 0)
-                config.Css = builder.ToString();
+            var css = ResolveCssFromAdditionalTexts(additionalFiles, config);
+            if (css.Length > 0)
+                config.Css = css;
         }
 
         return ConfigInput.From(config, [], match.Path, text);
@@ -180,8 +163,6 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
                 assembly.Error));
         }
 
-        // Referenced configurations first, then the current project's configuration so an app can
-        // override a library token without restating the whole document.
         var configurations = new List<KhamsinConfig>(referenced.Length + 1);
         foreach (var assembly in referenced)
             if (assembly.Config is not null)
@@ -305,7 +286,6 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
 
         foreach (var literal in scan.Literals)
         {
-            // Kx groups are diagnosed by the C# analyzer; author class attributes are open-world.
             if (literal.Group is >= KxGroupBase and < 3_000_000)
                 continue;
 
@@ -450,7 +430,7 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
     private static string OpenGenericMetadataName(string fullName, int arity)
         => arity == 0 ? fullName : fullName + "`" + arity;
 
-    private sealed class ProjectComponent
+    private sealed record ProjectComponent
     {
         internal ProjectComponent(string fullName, int arity)
         {
@@ -514,39 +494,50 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// Embeds this project's own configuration in metadata. Referenced builds read the attribute
-    /// and merge it under their own configuration; the attributed document stays unchanged.
-    /// </summary>
-    /// <summary>
     /// Resolves the CSS file paths from the config against the AdditionalTexts and returns the
     /// concatenated content. The generator has no file IO; it reads through the compiler pipeline.
+    /// A relative path that matches a trailing path segment wins over a bare file name match, so
+    /// <c>Styles/app.css</c> and <c>wwwroot/app.css</c> are told apart.
     /// </summary>
     private static string ResolveCssFromAdditionalTexts(
-        ImmutableArray<AdditionalText> additionalTexts, Khamsin.KhamsinConfig config)
+        ImmutableArray<AdditionalText> additionalTexts, KhamsinConfig config)
     {
         if (config.CssFiles is not { Count: > 0 })
             return string.Empty;
 
-        var builder = new System.Text.StringBuilder();
+        var builder = new StringBuilder();
         foreach (var cssPath in config.CssFiles)
         {
-            AdditionalText? match = null;
+            if (string.IsNullOrWhiteSpace(cssPath))
+                continue;
+
+            var fileName = Path.GetFileName(cssPath);
+            var suffix = "/" + NormalizeSeparators(cssPath).TrimStart('/', '~', '.');
+
+            AdditionalText? byName = null;
+            AdditionalText? byPath = null;
             foreach (var file in additionalTexts)
             {
-                var fileName = System.IO.Path.GetFileName(file.Path);
-                if (string.Equals(fileName, System.IO.Path.GetFileName(cssPath), StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(Path.GetFileName(file.Path), fileName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                byName ??= file;
+                if (("/" + NormalizeSeparators(file.Path)).EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
                 {
-                    match = file;
+                    byPath = file;
                     break;
                 }
             }
 
-            if (match?.GetText() is { } text)
+            if ((byPath ?? byName)?.GetText() is { } text)
                 builder.AppendLine(text.ToString());
         }
 
         return builder.ToString();
     }
+
+    private static string NormalizeSeparators(string path)
+        => path.Replace('\\', '/');
 
     private static void EmitConfigAttribute(SourceProductionContext context, string json, string css = "")
     {
@@ -572,7 +563,7 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
     /// referenced libraries never competes with the application's configuration. Callers must
     /// ensure the compilation targets a runtime that has ModuleInitializerAttribute.
     /// </summary>
-    private static void EmitThemeRegistration(SourceProductionContext context, Khamsin.KhamsinConfig config)
+    private static void EmitThemeRegistration(SourceProductionContext context, KhamsinConfig config)
     {
         var source = new StringBuilder();
         source.AppendLine("// <auto-generated/>");
@@ -653,7 +644,7 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
         {
             if (c is '"' or '\\')
                 builder.Append('\\').Append(c);
-            else if (c == '\r' || c == '\n' || c == '\t')
+            else if (c is '\r' or '\n' or '\t')
                 builder.Append('\\').Append(c switch { '\r' => 'r', '\n' => 'n', _ => 't' });
             else
                 builder.Append(c);

@@ -17,6 +17,8 @@
     <CompilerVisibleProperty Include="KhamsinConfig" />
     <AdditionalFiles Include="**/*.razor" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" Condition="'$(KhamsinAddRazorAdditionalFiles)' != 'false'" />
     <AdditionalFiles Include="$(KhamsinConfig)" Condition="'$(KhamsinConfig)' != '' and Exists('$(KhamsinConfig)')" />
-    <AdditionalFiles Include="**/*.css" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder);**\obj\**;**\bin\**;**\wwwroot\**;**\node_modules\**" />
+    <!-- wwwroot is included on purpose: khamsin.json css entries may live there, and libraries
+         have no MSBuild task to read them, so the generator embeds their content. -->
+    <AdditionalFiles Include="**/*.css" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder);**\obj\**;**\bin\**;**\node_modules\**" />
   </ItemGroup>
 </Project>

@@ -37,7 +37,7 @@ public sealed class KhamsinAnalyzer : DiagnosticAnalyzer
     /// </summary>
     private static KhamsinEngine CreateEngine(AnalyzerOptions options, Compilation compilation)
     {
-        var configurations = new List<Khamsin.KhamsinConfig>();
+        var configurations = new List<KhamsinConfig>();
 
         foreach (var referenced in ConfigDiscovery.Read(compilation))
             if (referenced.Config is not null)
@@ -49,10 +49,10 @@ public sealed class KhamsinAnalyzer : DiagnosticAnalyzer
 
         return configurations.Count == 0
             ? KhamsinEngine.Default
-            : new KhamsinEngine(Khamsin.KhamsinConfig.Merge(configurations).ToTheme());
+            : new KhamsinEngine(KhamsinConfig.Merge(configurations).ToTheme());
     }
 
-    private static Khamsin.KhamsinConfig? ReadOwnConfig(AnalyzerOptions options)
+    private static KhamsinConfig? ReadOwnConfig(AnalyzerOptions options)
     {
         var provider = options.AnalyzerConfigOptionsProvider;
         if (provider?.GlobalOptions.TryGetValue("build_property.KhamsinConfig", out var configuredName) != true)
@@ -79,7 +79,7 @@ public sealed class KhamsinAnalyzer : DiagnosticAnalyzer
         if (text is null)
             return null;
 
-        return Khamsin.KhamsinConfig.TryParse(text, out var config, out _) ? config : null;
+        return KhamsinConfig.TryParse(text, out var config, out _) ? config : null;
     }
 
     private static bool IsConfigFilePath(string path, string configuredName)
