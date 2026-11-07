@@ -30,9 +30,7 @@ internal static class CnSyntax
         if (expression is IdentifierNameSyntax { Identifier.ValueText: "Cn" })
             return true;
 
-        if (expression is MemberAccessExpressionSyntax member &&
-            member.Name.Identifier.ValueText == "Cn" &&
-            member.Expression is IdentifierNameSyntax { Identifier.ValueText: "Khamsin" })
+        if (expression is MemberAccessExpressionSyntax { Name.Identifier.ValueText: "Cn", Expression: IdentifierNameSyntax { Identifier.ValueText: "Khamsin" } })
             return true;
 
         return false;
@@ -65,8 +63,8 @@ internal static class CnSyntax
         out List<(string Value, Location Location)> literals,
         out List<(string Text, Location Location)> nonLiterals)
     {
-        literals = new List<(string, Location)>();
-        nonLiterals = new List<(string, Location)>();
+        literals = [];
+        nonLiterals = [];
 
         foreach (var argument in invocation.ArgumentList.Arguments)
             Visit(argument.Expression, model, cancellationToken, literals, nonLiterals);
@@ -91,6 +89,11 @@ internal static class CnSyntax
             case ConditionalExpressionSyntax conditional:
                 Visit(conditional.WhenTrue, model, cancellationToken, literals, nonLiterals);
                 Visit(conditional.WhenFalse, model, cancellationToken, literals, nonLiterals);
+                return;
+
+            case BinaryExpressionSyntax add when add.IsKind(SyntaxKind.AddExpression):
+                Visit(add.Left, model, cancellationToken, literals, nonLiterals);
+                Visit(add.Right, model, cancellationToken, literals, nonLiterals);
                 return;
 
             case BinaryExpressionSyntax coalesce when coalesce.IsKind(SyntaxKind.CoalesceExpression):
@@ -134,14 +137,12 @@ internal static class CnSyntax
         // KhamsinClass is already extracted at its own declaration site. Everything else carries
         // classes the build cannot know.
         var constant = model.GetConstantValue(expression, cancellationToken);
-        if (constant.HasValue && constant.Value is string constText)
+        if (constant is { HasValue: true, Value: string constText })
         {
             literals.Add((constText, expression.GetLocation()));
             return;
         }
 
-        // Component parameters (the Blazor [Parameter] convention) carry values written as literal
-        // attributes at the consumer's call site, where the scan extracts them.
         var symbol = model.GetSymbolInfo(expression, cancellationToken).Symbol
             ?? model.GetDeclaredSymbol(expression, cancellationToken);
         if (symbol is IParameterSymbol)

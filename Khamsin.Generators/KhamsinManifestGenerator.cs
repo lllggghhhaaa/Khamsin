@@ -226,7 +226,9 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
                 if (engine.TryParse(literal.Value, out _, out _)) AddDistinct(classes, literal.Value);
 
             if (kxByType.TryGetValue(fullName, out var kx))
-                foreach (var value in kx.Classes) AddDistinct(classes, value);
+                foreach (var value in kx.Classes)
+                    if (kx.IsStrict || engine.TryParse(value, out _, out _))
+                        AddDistinct(classes, value);
 
             ReportRazorDiagnostics(context, engine, file, scan);
 
@@ -249,7 +251,9 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
             var kx = kxByType[fullName];
             if (!kx.IsComponent || !kx.CanBeExtended || !IsExtendable(kx.Accessibility) || fullName.IndexOf('+') >= 0)
             {
-                foreach (var value in kx.Classes) AddDistinct(assemblyClasses, value);
+                foreach (var value in kx.Classes)
+                    if (kx.IsStrict || engine.TryParse(value, out _, out _))
+                        AddDistinct(assemblyClasses, value);
 
                 continue;
             }
@@ -737,7 +741,8 @@ public sealed class KhamsinManifestGenerator : IIncrementalGenerator
                 existing.Accessibility,
                 existing.IsComponent || manifest.IsComponent,
                 existing.CanBeExtended && manifest.CanBeExtended,
-                classes.ToImmutableArray());
+                classes.ToImmutableArray(),
+                existing.IsStrict && manifest.IsStrict);
         }
 
         return merged;

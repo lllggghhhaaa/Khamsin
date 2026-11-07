@@ -9,7 +9,7 @@
     <!-- The task assemblies intentionally live under tasks/, not lib/. -->
     <NoWarn>$(NoWarn);NU5100;NU5128</NoWarn>
     <PackageId>Khamsin</PackageId>
-    <Version>0.3.2</Version>
+    <Version>0.3.4</Version>
     <Authors>lllggghhhaaa</Authors>
     <Copyright>Copyright (c) 2026 Khamsin contributors</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -18,7 +18,7 @@
     <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Bundles custom CSS into khamsin.css: khamsin.json's css files and referenced libraries' stylesheets are emitted in the base layer between theme and utilities, so consumers link one stylesheet. Emits a Tailwind-compatible preflight in the base layer, extracts class attributes from render fragments declared in @code blocks, accepts fully qualified Khamsin.Cn/Khamsin.Kx calls, adds visible/invisible utilities and animate-in fade defaults, and fixes negative fraction utilities plus the attribute emitter and metadata reader.</PackageReleaseNotes>
+    <PackageReleaseNotes>Bundles custom CSS into khamsin.css: khamsin.json's css files and referenced libraries' stylesheets are emitted in the base layer between theme and utilities, so consumers link one stylesheet, including correct merging of referenced library configs. Emits a Tailwind-compatible preflight in the base layer, extracts class attributes from render fragments declared in @code blocks, accepts fully qualified Khamsin.Cn/Khamsin.Kx calls, adds visible/invisible utilities and animate-in fade defaults, and fixes negative fraction utilities (the minus sign was dropped from -translate-x-1/2 style values) plus the attribute emitter, the metadata reader and the internal @property registrations that had gone missing.</PackageReleaseNotes>
     <PackageTags>blazor;css;utility-css;dotnet;msbuild;source-generator</PackageTags>
   </PropertyGroup>
 

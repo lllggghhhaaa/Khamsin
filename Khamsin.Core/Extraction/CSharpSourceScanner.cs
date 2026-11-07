@@ -8,6 +8,7 @@ public enum KxCallKind
     Variant,
     KhamsinClass,
     Cn,
+    Composition,
 }
 
 public sealed class CSharpLiteral
@@ -38,32 +39,23 @@ public static class CSharpSourceScanner
     {
         var results = new List<CSharpLiteral>();
         if (string.IsNullOrEmpty(text))
-        {
             return results;
-        }
 
         var index = 0;
         while (index < text.Length)
         {
             if (!TryFindCall(text, index, out var callStart, out var callKind, out var openParen))
-            {
                 break;
-            }
 
             var closeParen = FindMatchingParenthesis(text, openParen);
             if (closeParen < 0)
-            {
                 break;
-            }
 
             if (callKind == KxCallKind.Cn)
             {
                 CollectLiterals(text, openParen + 1, closeParen, callKind, results);
                 index = closeParen + 1;
-                if (callStart > index)
-                {
-                    index = callStart;
-                }
+                if (callStart > index) index = callStart;
 
                 continue;
             }
@@ -74,10 +66,8 @@ public static class CSharpSourceScanner
                 switch (callKind)
                 {
                     case KxCallKind.When:
-                        for (var i = 1; i < arguments.Count; i++)
-                        {
+                        for (var i = 1; i < arguments.Count; i++) 
                             CollectLiterals(text, arguments[i].Start, arguments[i].End, callKind, results);
-                        }
 
                         break;
 
@@ -87,15 +77,11 @@ public static class CSharpSourceScanner
                             var argument = arguments[i];
                             if (IsTuple(text, argument.Start, argument.End))
                             {
-                                // Split the tuple's contents, not the tuple itself: the commas inside
-                                // the parentheses separate elements, and the first element is the key.
                                 var tupleStart = SkipWhitespace(text, argument.Start, argument.End);
                                 var tupleEnd = TrimEnd(text, tupleStart, argument.End);
                                 var elements = SplitArguments(text, tupleStart + 1, tupleEnd - 1);
-                                for (var e = 1; e < elements.Count; e++)
-                                {
+                                for (var e = 1; e < elements.Count; e++) 
                                     CollectLiterals(text, elements[e].Start, elements[e].End, callKind, results);
-                                }
                             }
                             else
                             {
@@ -108,10 +94,7 @@ public static class CSharpSourceScanner
             }
 
             index = closeParen + 1;
-            if (callStart > index)
-            {
-                index = callStart;
-            }
+            if (callStart > index) index = callStart;
         }
 
         return results;
@@ -126,36 +109,25 @@ public static class CSharpSourceScanner
     {
         var results = new List<CSharpLiteral>();
         if (string.IsNullOrEmpty(text))
-        {
             return results;
-        }
 
         var index = 0;
         while (index < text.Length)
         {
             var at = IndexOfIdentifier(text, "KhamsinClass", index);
             if (at < 0)
-            {
                 break;
-            }
 
             index = at + "KhamsinClass".Length;
             var cursor = SkipTrivia(text, index);
             if (cursor >= text.Length || !IsIdentifierStart(text[cursor]))
-            {
                 continue;
-            }
 
-            while (cursor < text.Length && IsIdentifierPart(text[cursor]))
-            {
-                cursor++;
-            }
+            while (cursor < text.Length && IsIdentifierPart(text[cursor])) cursor++;
 
             cursor = SkipTrivia(text, cursor);
             if (cursor >= text.Length || text[cursor] != '=')
-            {
                 continue;
-            }
 
             cursor = SkipTrivia(text, cursor + 1);
             if (cursor < text.Length && MatchesWord(text, cursor, "new"))
@@ -163,36 +135,259 @@ public static class CSharpSourceScanner
                 cursor = SkipTrivia(text, cursor + 3);
                 if (cursor < text.Length && IsIdentifierStart(text[cursor]))
                 {
-                    while (cursor < text.Length && IsIdentifierPart(text[cursor]))
-                    {
-                        cursor++;
-                    }
+                    while (cursor < text.Length && IsIdentifierPart(text[cursor])) cursor++;
 
                     cursor = SkipTrivia(text, cursor);
                 }
 
                 if (cursor >= text.Length || text[cursor] != '(')
-                {
                     continue;
-                }
 
                 cursor = SkipTrivia(text, cursor + 1);
             }
 
             if (cursor >= text.Length || text[cursor] != '"')
-            {
                 continue;
-            }
 
-            if (TryReadString(text, cursor, text.Length, out var value, out var next))
-            {
+            if (TryReadString(text, cursor, text.Length, out var value, out var next)) 
                 results.Add(new CSharpLiteral(value, cursor, KxCallKind.KhamsinClass));
-            }
 
             index = next;
         }
 
         return results;
+    }
+
+    /// <summary>
+    /// Finds string literals that can carry classes in C# code: plain, verbatim and raw literals,
+    /// interpolated fragments, concatenation and ternary operands, and class attributes embedded in
+    /// markup strings. A candidate is kept only when it looks like a class list according to
+    /// <paramref name="isUtility"/>; without a predicate every multi-token literal that is not markup
+    /// qualifies, which keeps the scanner usable without the registry.
+    /// </summary>
+    public static IReadOnlyList<CSharpLiteral> FindClassCompositionLiterals(string text, Func<string, bool>? isUtility = null)
+    {
+        var results = new List<CSharpLiteral>();
+        if (string.IsNullOrEmpty(text))
+            return results;
+
+        var index = 0;
+        while (index < text.Length)
+        {
+            var c = text[index];
+            if (c == '/' && index + 1 < text.Length && text[index + 1] == '/')
+            {
+                index = SkipLineComment(text, index);
+                continue;
+            }
+
+            if (c == '/' && index + 1 < text.Length && text[index + 1] == '*')
+            {
+                index = SkipBlockComment(text, index);
+                continue;
+            }
+
+            if (c == '\'')
+            {
+                index = SkipChar(text, index);
+                continue;
+            }
+
+            if (c == '@' && index + 1 < text.Length && text[index + 1] == '"')
+            {
+                if (TryReadVerbatimString(text, index, text.Length, out var verbatim, out var next))
+                    AddCompositionCandidate(results, verbatim, index, isUtility);
+
+                index = next;
+                continue;
+            }
+
+            if (c == '$')
+            {
+                index = Math.Max(CollectInterpolatedComposition(text, index, results, isUtility), index + 1);
+                continue;
+            }
+
+            if (c == '"')
+            {
+                var quotes = 1;
+                while (index + quotes < text.Length && text[index + quotes] == '"') quotes++;
+
+                if (quotes >= 3)
+                {
+                    var contentStart = index + quotes;
+                    var close = text.IndexOf(new string('"', quotes), contentStart, StringComparison.Ordinal);
+                    if (close < 0)
+                        break;
+
+                    AddCompositionCandidate(results, text.Substring(contentStart, close - contentStart), contentStart, isUtility);
+                    index = close + quotes;
+                    continue;
+                }
+
+                if (TryReadString(text, index, text.Length, out var value, out var next)) 
+                    AddCompositionCandidate(results, value, index, isUtility);
+
+                index = next;
+                continue;
+            }
+
+            index++;
+        }
+
+        return results;
+    }
+
+    private static int CollectInterpolatedComposition(
+        string text, int start, List<CSharpLiteral> results, Func<string, bool>? isUtility)
+    {
+        var cursor = start + 1;
+        if (cursor < text.Length && text[cursor] == '@') cursor++;
+
+        if (cursor >= text.Length || text[cursor] != '"')
+            return cursor;
+
+        var contentStart = cursor + 1;
+        cursor = contentStart;
+        var fragmentStart = contentStart;
+        while (cursor < text.Length)
+        {
+            var c = text[cursor];
+            if (c == '\\' && cursor + 1 < text.Length)
+            {
+                cursor += 2;
+                continue;
+            }
+
+            if (c == '{')
+            {
+                if (cursor + 1 < text.Length && text[cursor + 1] == '{')
+                {
+                    cursor += 2;
+                    continue;
+                }
+
+                AddCompositionCandidate(results, text.Substring(fragmentStart, cursor - fragmentStart), fragmentStart, isUtility);
+                var holeEnd = FindMatchingBrace(text, cursor);
+                if (holeEnd > cursor + 1)
+                    foreach (var nested in FindClassCompositionLiterals(text.Substring(cursor + 1, holeEnd - cursor - 1), isUtility))
+                        results.Add(new CSharpLiteral(nested.Value, cursor + 1 + nested.Offset, KxCallKind.Composition));
+
+                cursor = holeEnd + 1;
+                fragmentStart = cursor;
+                continue;
+            }
+
+            if (c == '"')
+                break;
+
+            cursor++;
+        }
+
+        if (cursor > fragmentStart) 
+            AddCompositionCandidate(results, text.Substring(fragmentStart, cursor - fragmentStart), fragmentStart, isUtility);
+
+        return Math.Min(cursor + 1, text.Length);
+    }
+
+    private static void AddCompositionCandidate(
+        List<CSharpLiteral> results, string value, int offset, Func<string, bool>? isUtility)
+    {
+        if (value.Length == 0)
+            return;
+
+        if (value.IndexOf("class=", StringComparison.Ordinal) >= 0 || value.IndexOf("Class=", StringComparison.Ordinal) >= 0)
+        {
+            foreach (var attribute in ExtractEmbeddedClassAttributes(value))
+                if (LooksLikeClassList(attribute.Value, isUtility)) results.Add(new CSharpLiteral(attribute.Value, offset + attribute.Offset, KxCallKind.Composition));
+
+            return;
+        }
+
+        if (LooksLikeClassList(value, isUtility)) results.Add(new CSharpLiteral(value, offset, KxCallKind.Composition));
+    }
+
+    private static IEnumerable<(string Value, int Offset)> ExtractEmbeddedClassAttributes(string text)
+    {
+        var index = 0;
+        while (index < text.Length)
+        {
+            if (!ClassCompositionScanner.TryReadAttributeName(text, index, out var length))
+            {
+                index++;
+                continue;
+            }
+
+            var cursor = index + length;
+            while (cursor < text.Length && char.IsWhiteSpace(text[cursor])) cursor++;
+
+            if (cursor >= text.Length || text[cursor] != '=')
+            {
+                index += length;
+                continue;
+            }
+
+            cursor++;
+            while (cursor < text.Length && char.IsWhiteSpace(text[cursor])) cursor++;
+
+            if (cursor >= text.Length || (text[cursor] != '"' && text[cursor] != '\''))
+            {
+                index = cursor;
+                continue;
+            }
+
+            var quote = text[cursor];
+            var start = cursor + 1;
+            var end = text.IndexOf(quote, start);
+            if (end < 0)
+                yield break;
+
+            yield return (text.Substring(start, end - start), start);
+            index = end + 1;
+        }
+    }
+
+    private static bool LooksLikeClassList(string value, Func<string, bool>? isUtility)
+    {
+        var tokens = 0;
+        var known = 0;
+        foreach (var token in KhamsinEngine.Tokenize(value))
+        {
+            tokens++;
+            if (isUtility?.Invoke(token) ?? token.Length > 1) known++;
+        }
+
+        if (tokens == 0)
+            return false;
+
+        return isUtility is null ? tokens >= 2 : known * 2 >= tokens;
+    }
+
+    private static int FindMatchingBrace(string text, int openBrace)
+    {
+        var depth = 0;
+        for (var i = openBrace; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (c is '"' or '\'')
+            {
+                i = SkipString(text, i) - 1;
+                continue;
+            }
+
+            if (c == '{')
+            {
+                depth++;
+            }
+            else if (c == '}')
+            {
+                depth--;
+                if (depth == 0)
+                    return i;
+            }
+        }
+
+        return text.Length - 1;
     }
 
     private static int IndexOfIdentifier(string text, string identifier, int start)
@@ -202,17 +397,13 @@ public static class CSharpSourceScanner
         {
             var at = text.IndexOf(identifier, index, StringComparison.Ordinal);
             if (at < 0)
-            {
                 return -1;
-            }
 
             var before = at == 0 || !IsIdentifierPart(text[at - 1]);
             var end = at + identifier.Length;
             var after = end >= text.Length || !IsIdentifierPart(text[end]);
             if (before && after)
-            {
                 return at;
-            }
 
             index = at + identifier.Length;
         }
@@ -229,22 +420,16 @@ public static class CSharpSourceScanner
         for (var i = start; i < text.Length - 1; i++)
         {
             if (!IsIdentifierStart(text[i]))
-            {
                 continue;
-            }
 
             if (i > 0 && IsIdentifierPart(text[i - 1]))
-            {
                 continue;
-            }
 
             if (text[i] == 'K' && i + 1 < text.Length && text[i + 1] == 'x' && (i + 2 >= text.Length || !IsIdentifierPart(text[i + 2])))
             {
                 var cursor = SkipTrivia(text, i + 2);
                 if (cursor >= text.Length || text[cursor] != '.')
-                {
                     continue;
-                }
 
                 cursor = SkipTrivia(text, cursor + 1);
                 if (MatchesWord(text, cursor, "When"))
@@ -264,9 +449,7 @@ public static class CSharpSourceScanner
 
                 cursor = SkipTrivia(text, cursor);
                 if (cursor >= text.Length || text[cursor] != '(')
-                {
                     continue;
-                }
 
                 callStart = i;
                 openParen = cursor;
@@ -277,30 +460,20 @@ public static class CSharpSourceScanner
             {
                 var cursor = SkipTrivia(text, i + 2);
                 if (cursor >= text.Length || text[cursor] != '.')
-                {
                     continue;
-                }
 
                 cursor = SkipTrivia(text, cursor + 1);
                 int methodNameLength;
                 if (MatchesWord(text, cursor, "Of"))
-                {
                     methodNameLength = 2;
-                }
                 else if (MatchesWord(text, cursor, "Merge"))
-                {
                     methodNameLength = 5;
-                }
                 else
-                {
                     continue;
-                }
 
                 cursor = SkipTrivia(text, cursor + methodNameLength);
                 if (cursor >= text.Length || text[cursor] != '(')
-                {
                     continue;
-                }
 
                 callStart = i;
                 openParen = cursor;
@@ -344,9 +517,7 @@ public static class CSharpSourceScanner
             {
                 depth--;
                 if (depth == 0)
-                {
                     return i;
-                }
             }
         }
 
@@ -368,13 +539,9 @@ public static class CSharpSourceScanner
             }
 
             if (c is '(' or '[' or '{')
-            {
                 depth++;
-            }
             else if (c is ')' or ']' or '}')
-            {
                 depth--;
-            }
             else if (c == ',' && depth == 0)
             {
                 spans.Add(new Span(argumentStart, i));
@@ -418,10 +585,8 @@ public static class CSharpSourceScanner
 
             if (c == '@' && i + 1 < end && text[i + 1] == '"')
             {
-                if (TryReadVerbatimString(text, i, end, out var value, out var next))
-                {
+                if (TryReadVerbatimString(text, i, end, out var value, out var next)) 
                     results.Add(new CSharpLiteral(value, i, kind));
-                }
 
                 i = next - 1;
                 continue;
@@ -437,10 +602,8 @@ public static class CSharpSourceScanner
 
             if (c == '"')
             {
-                if (TryReadString(text, i, end, out var value, out var next))
-                {
+                if (TryReadString(text, i, end, out var value, out var next)) 
                     results.Add(new CSharpLiteral(value, i, kind));
-                }
 
                 i = next - 1;
             }
@@ -516,14 +679,10 @@ public static class CSharpSourceScanner
     private static int SkipString(string text, int start)
     {
         if (start >= text.Length)
-        {
             return text.Length;
-        }
 
         if (text[start] == '\'')
-        {
             return SkipChar(text, start);
-        }
 
         var verbatim = false;
         var cursor = start;
@@ -543,9 +702,7 @@ public static class CSharpSourceScanner
         }
 
         if (cursor >= text.Length || text[cursor] != '"')
-        {
             return cursor;
-        }
 
         if (verbatim)
         {
@@ -579,9 +736,7 @@ public static class CSharpSourceScanner
             }
 
             if (text[cursor] == '"')
-            {
                 return cursor + 1;
-            }
 
             cursor++;
         }
@@ -601,9 +756,7 @@ public static class CSharpSourceScanner
             }
 
             if (text[cursor] == '\'')
-            {
                 return cursor + 1;
-            }
 
             cursor++;
         }
@@ -625,30 +778,21 @@ public static class CSharpSourceScanner
 
     private static int SkipTrivia(string text, int index)
     {
-        while (index < text.Length && char.IsWhiteSpace(text[index]))
-        {
-            index++;
-        }
+        while (index < text.Length && char.IsWhiteSpace(text[index])) index++;
 
         return index;
     }
 
     private static int SkipWhitespace(string text, int index, int end)
     {
-        while (index < end && char.IsWhiteSpace(text[index]))
-        {
-            index++;
-        }
+        while (index < end && char.IsWhiteSpace(text[index])) index++;
 
         return index;
     }
 
     private static int TrimEnd(string text, int start, int end)
     {
-        while (end > start && char.IsWhiteSpace(text[end - 1]))
-        {
-            end--;
-        }
+        while (end > start && char.IsWhiteSpace(text[end - 1])) end--;
 
         return end;
     }
@@ -656,14 +800,10 @@ public static class CSharpSourceScanner
     private static bool MatchesWord(string text, int start, string word)
     {
         if (start + word.Length > text.Length)
-        {
             return false;
-        }
 
         if (string.CompareOrdinal(text, start, word, 0, word.Length) != 0)
-        {
             return false;
-        }
 
         var end = start + word.Length;
         return end >= text.Length || !IsIdentifierPart(text[end]);
@@ -673,16 +813,5 @@ public static class CSharpSourceScanner
 
     private static bool IsIdentifierPart(char c) => char.IsLetterOrDigit(c) || c == '_';
 
-    private readonly struct Span
-    {
-        public Span(int start, int end)
-        {
-            Start = start;
-            End = end;
-        }
-
-        public int Start { get; }
-
-        public int End { get; }
-    }
+    private readonly record struct Span(int Start, int End);
 }

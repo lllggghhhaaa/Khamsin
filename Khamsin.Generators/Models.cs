@@ -26,7 +26,8 @@ internal sealed class KxManifest(
     string accessibility,
     bool isComponent,
     bool canBeExtended,
-    ImmutableArray<string> classes)
+    ImmutableArray<string> classes,
+    bool isStrict = true)
     : IEquatable<KxManifest>
 {
     public string TypeFullName { get; } = typeFullName;
@@ -40,6 +41,12 @@ internal sealed class KxManifest(
 
     public ImmutableArray<string> Classes { get; } = classes;
 
+    /// <summary>
+    /// True for <c>KhamsinClass</c>-typed declarations, whose tokens are validated by the analyzer.
+    /// Plain <c>string</c> members are best effort and filtered against the registry instead.
+    /// </summary>
+    public bool IsStrict { get; } = isStrict;
+
     public bool Equals(KxManifest? other)
     {
         if (other is null ||
@@ -47,6 +54,7 @@ internal sealed class KxManifest(
             !string.Equals(Accessibility, other.Accessibility, StringComparison.Ordinal) ||
             IsComponent != other.IsComponent ||
             CanBeExtended != other.CanBeExtended ||
+            IsStrict != other.IsStrict ||
             Classes.Length != other.Classes.Length)
             return false;
 

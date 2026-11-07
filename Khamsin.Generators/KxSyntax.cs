@@ -1,3 +1,4 @@
+using Khamsin.Extraction;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -90,8 +91,18 @@ internal static class KxSyntax
     internal static bool IsClassLiteralCandidate(SyntaxNode node)
     {
         var initializer = Initializer(node);
-        return initializer is LiteralExpressionSyntax or ObjectCreationExpressionSyntax or ImplicitObjectCreationExpressionSyntax or CastExpressionSyntax;
+        return initializer is not null && MayCarryClasses(initializer);
     }
+
+    private static bool MayCarryClasses(ExpressionSyntax expression) =>
+        expression is LiteralExpressionSyntax
+            or InterpolatedStringExpressionSyntax
+            or BinaryExpressionSyntax
+            or ConditionalExpressionSyntax
+            or ParenthesizedExpressionSyntax
+            or ObjectCreationExpressionSyntax
+            or ImplicitObjectCreationExpressionSyntax
+            or CastExpressionSyntax;
 
     internal static ExpressionSyntax? Initializer(SyntaxNode node)
     {
@@ -100,7 +111,9 @@ internal static class KxSyntax
             case VariableDeclaratorSyntax variable:
                 return variable.Initializer?.Value;
             case PropertyDeclarationSyntax property:
-                return property.Initializer?.Value;
+                return property.Initializer?.Value ?? property.ExpressionBody?.Expression;
+            case MethodDeclarationSyntax method:
+                return method.ExpressionBody?.Expression;
             default:
                 return null;
         }
@@ -126,15 +139,23 @@ internal static class KxSyntax
             case ILocalSymbol local:
                 type = local.Type as INamedTypeSymbol;
                 break;
+            case IMethodSymbol method:
+                type = method.ReturnType as INamedTypeSymbol;
+                break;
             default:
                 return null;
         }
 
-        if (type is null || !string.Equals(type.ToDisplayString(), "Khamsin.KhamsinClass", StringComparison.Ordinal))
+        if (type is null)
             return null;
 
-        var literal = UnwrapInitializerLiteral(initializer);
-        if (literal is null)
+        var isStrict = string.Equals(type.ToDisplayString(), "Khamsin.KhamsinClass", StringComparison.Ordinal);
+        if (!isStrict && type.SpecialType != SpecialType.System_String)
+            return null;
+
+        var values = new List<string>();
+        CollectClassStrings(initializer, values);
+        if (values.Count == 0)
             return null;
 
         var containing = declared!.ContainingType;
@@ -146,7 +167,8 @@ internal static class KxSyntax
             AccessibilityOf(containing),
             IsComponent(containing),
             CanBeExtended(containing),
-            [.. KhamsinEngine.Tokenize(literal.Token.ValueText)]);
+            [.. values.SelectMany(KhamsinEngine.Tokenize)],
+            isStrict);
     }
 
     internal static LiteralExpressionSyntax? UnwrapInitializerLiteral(ExpressionSyntax expression) =>
@@ -161,6 +183,58 @@ internal static class KxSyntax
                 UnwrapInitializerLiteral(implicitCreation.ArgumentList.Arguments[0].Expression),
             _ => null
         };
+
+    /// <summary>
+    /// Collects every literal that can contribute classes to one initializer: plain and interpolated
+    /// strings, concatenation operands, ternary branches and single-argument constructions.
+    /// </summary>
+    private static void CollectClassStrings(ExpressionSyntax expression, List<string> values)
+    {
+        switch (expression)
+        {
+            case LiteralExpressionSyntax literal when literal.IsKind(SyntaxKind.StringLiteralExpression):
+                values.Add(literal.Token.ValueText);
+                return;
+
+            case InterpolatedStringExpressionSyntax interpolated:
+                foreach (var fragment in CSharpSourceScanner.FindClassCompositionLiterals(interpolated.ToString(), static _ => true))
+                    values.Add(fragment.Value);
+
+                return;
+
+            case BinaryExpressionSyntax binary when binary.IsKind(SyntaxKind.AddExpression):
+                CollectClassStrings(binary.Left, values);
+                CollectClassStrings(binary.Right, values);
+                return;
+
+            case ConditionalExpressionSyntax conditional:
+                CollectClassStrings(conditional.WhenTrue, values);
+                CollectClassStrings(conditional.WhenFalse, values);
+                return;
+
+            case ParenthesizedExpressionSyntax parenthesized:
+                CollectClassStrings(parenthesized.Expression, values);
+                return;
+
+            case CastExpressionSyntax cast:
+                CollectClassStrings(cast.Expression, values);
+                return;
+
+            case ObjectCreationExpressionSyntax { ArgumentList.Arguments.Count: 1 } creation:
+                CollectClassStrings(creation.ArgumentList.Arguments[0].Expression, values);
+                return;
+
+            case ImplicitObjectCreationExpressionSyntax { ArgumentList.Arguments.Count: 1 } implicitCreation:
+                CollectClassStrings(implicitCreation.ArgumentList.Arguments[0].Expression, values);
+                return;
+
+            case InvocationExpressionSyntax invocation:
+                foreach (var argument in invocation.ArgumentList.Arguments)
+                    CollectClassStrings(argument.Expression, values);
+
+                return;
+        }
+    }
 
     internal static KxManifest? Extract(GeneratorSyntaxContext context, CancellationToken cancellationToken)
     {

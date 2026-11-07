@@ -178,4 +178,63 @@ public sealed class ManifestGeneratorTests
         Assert.Contains("p-2", assembly, StringComparison.Ordinal);
         Assert.Contains("p-4", assembly, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Composed_class_attributes_are_extracted()
+    {
+        const string razor = """
+            @using Sample.Components
+            <section class="@($"p-4 {State.Open ? "p-2" : "p-8"}")">
+                <Child ClassName="mt-6" />
+            </section>
+            """;
+
+        var (result, _, diagnostics) = GeneratorHarness.Run(new[] { (Path, razor) });
+
+        Assert.Empty(diagnostics.Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error));
+        var manifest = result.GeneratedTrees.Select(tree => tree.ToString())
+            .Single(source => source.Contains("partial class Widget", StringComparison.Ordinal));
+        Assert.Contains("p-4", manifest, StringComparison.Ordinal);
+        Assert.Contains("p-2", manifest, StringComparison.Ordinal);
+        Assert.Contains("p-8", manifest, StringComparison.Ordinal);
+        Assert.Contains("mt-6", manifest, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Expression_bodied_class_members_are_extracted()
+    {
+        var extra = "using Khamsin;\n" + GeneratorHarness.Components + """
+
+            namespace Sample.Components
+            {
+                internal static class Styles
+                {
+                    internal static string Row => "rounded-lg " + (Enabled ? "shadow-md" : "shadow-sm");
+                    internal static bool Enabled = true;
+                }
+            }
+            """;
+
+        var (result, _, _) = GeneratorHarness.Run(Array.Empty<(string, string)>(), extra);
+
+        var assembly = Assert.Single(
+            result.GeneratedTrees.Select(tree => tree.ToString()),
+            source => source.Contains("assembly: global::Khamsin.KhamsinManifestAttribute", StringComparison.Ordinal));
+        Assert.Contains("rounded-lg", assembly, StringComparison.Ordinal);
+        Assert.Contains("shadow-md", assembly, StringComparison.Ordinal);
+        Assert.Contains("shadow-sm", assembly, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Interpolated_khamsin_attribute_still_reports_non_literal()
+    {
+        const string razor = """
+            @using Sample.Components
+            <Child Khamsin="@($"p-4 {State.Open}")" />
+            """;
+
+        var (_, _, diagnostics) = GeneratorHarness.Run(new[] { (Path, razor) });
+
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Id == "KHM001");
+    }
 }

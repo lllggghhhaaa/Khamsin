@@ -11,7 +11,7 @@ public class ExtractionTests
         var literals = CSharpSourceScanner.FindKxLiterals(
             "var classes = Kx.When(flag, \"p-4\", \"p-8\");");
 
-        Assert.Equal(new[] { "p-4", "p-8" }, literals.Select(literal => literal.Value));
+        Assert.Equal(["p-4", "p-8"], literals.Select(literal => literal.Value));
     }
 
     [Fact]
@@ -20,7 +20,7 @@ public class ExtractionTests
         var literals = CSharpSourceScanner.FindKxLiterals(
             "var classes = Kx.Variant(size, (\"sm\", \"px-2\"), (\"lg\", \"px-6\"));");
 
-        Assert.Equal(new[] { "px-2", "px-6" }, literals.Select(literal => literal.Value));
+        Assert.Equal(["px-2", "px-6"], literals.Select(literal => literal.Value));
     }
 
     [Fact]
@@ -29,7 +29,7 @@ public class ExtractionTests
         var literals = CSharpSourceScanner.FindKxLiterals(
             "var classes = Kx.Variant(size, ( \"sm\" , \"px-2\" ));");
 
-        Assert.Equal(new[] { "px-2" }, literals.Select(literal => literal.Value));
+        Assert.Equal(["px-2"], literals.Select(literal => literal.Value));
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class ExtractionTests
         var literals = CSharpSourceScanner.FindKxLiterals(
             "var classes = Kx.When(flag, $\"p-{size}\", \"p-8\");");
 
-        Assert.Equal(new[] { "p-8" }, literals.Select(literal => literal.Value));
+        Assert.Equal(["p-8"], literals.Select(literal => literal.Value));
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public class ExtractionTests
         var literals = CSharpSourceScanner.FindKhamsinClassLiterals(
             "private static readonly KhamsinClass Defaults = \"rounded-lg p-4\";");
 
-        Assert.Equal(new[] { "rounded-lg p-4" }, literals.Select(literal => literal.Value));
+        Assert.Equal(["rounded-lg p-4"], literals.Select(literal => literal.Value));
     }
 
     [Fact]
@@ -130,5 +130,90 @@ public class ExtractionTests
             """);
 
         Assert.Empty(scan.TypeParameters);
+    }
+
+    [Fact]
+    public void Interpolated_class_attributes_contribute_literal_fragments()
+    {
+        var scan = RazorSourceScanner.Scan(
+            "<div class=\"@($\"wax-markdown mt-1 text-sm {(Grouped ? \"-mt-1\" : \"\")} sm:text-base\")\">Body</div>");
+
+        var values = scan.AuthorLiterals.Select(literal => literal.Value).ToList();
+
+        Assert.Contains("wax-markdown", values);
+        Assert.Contains("mt-1", values);
+        Assert.Contains("-mt-1", values);
+        Assert.Contains("sm:text-base", values);
+    }
+
+    [Fact]
+    public void Class_name_parameters_are_scanned()
+    {
+        var scan = RazorSourceScanner.Scan("<LucideIcon Name=\"loader-circle\" ClassName=\"animate-spin\" />");
+
+        Assert.Contains("animate-spin", scan.AuthorLiterals.Select(literal => literal.Value));
+    }
+
+    [Fact]
+    public void Bound_class_attributes_resolve_member_expressions()
+    {
+        const string razor = @"
+            @{ var stageFrame = expanded ? ""fixed top-20 z-[70]"" : ""bottom-24 sm:w-96""; }
+            <div id=""stage"" class=""@stageFrame""></div>";
+
+        var scan = RazorSourceScanner.Scan(razor);
+        var values = scan.AuthorLiterals.Select(literal => literal.Value).ToList();
+
+        Assert.Contains("z-[70]", values);
+        Assert.Contains("sm:w-96", values);
+        Assert.Empty(scan.References);
+    }
+
+    [Fact]
+    public void Unresolved_class_references_are_reported()
+    {
+        var scan = RazorSourceScanner.Scan("<div class=\"@MissingClass\"></div>");
+
+        Assert.Contains(scan.References, reference => reference.Name == "MissingClass");
+    }
+
+    [Fact]
+    public void Composed_csharp_strings_are_collected()
+    {
+        const string code = @"
+            internal string MobileNavClass => ""min-h-0 shrink-0 "" + (open
+                ? ""fixed inset-y-0 left-0 z-[45] flex""
+                : ""hidden md:flex"");";
+
+        var values = CSharpSourceScanner
+            .FindClassCompositionLiterals(code, token => token is "flex" or "hidden" or "z-[45]" or "md:flex" or "min-h-0" or "shrink-0" or "fixed" or "inset-y-0" or "left-0")
+            .Select(literal => literal.Value)
+            .ToList();
+
+        Assert.Contains(values, value => value.Contains("z-[45]"));
+        Assert.Contains(values, value => value.Contains("md:flex"));
+    }
+
+    [Fact]
+    public void Markup_strings_contribute_embedded_class_attributes()
+    {
+        const string code = @"renderer.Write(""<img class=\""inline-block h-5 w-5 align-text-bottom\"" />"");";
+
+        var values = CSharpSourceScanner
+            .FindClassCompositionLiterals(code, token => token is "inline-block" or "h-5" or "w-5" or "align-text-bottom")
+            .Select(literal => literal.Value)
+            .ToList();
+
+        Assert.Contains(values, value => value.Contains("align-text-bottom"));
+    }
+
+    [Fact]
+    public void Prose_strings_are_not_class_lists()
+    {
+        var literals = CSharpSourceScanner.FindClassCompositionLiterals(
+            "var message = \"Use 2-32 lowercase letters, numbers or underscores.\";",
+            token => token is "lowercase" or "numbers" or "underscores");
+
+        Assert.Empty(literals);
     }
 }

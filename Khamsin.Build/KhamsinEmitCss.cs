@@ -174,12 +174,8 @@ public sealed class KhamsinEmitCss : Task
                 return;
 
             foreach (var manifest in scan.Manifests)
-            {
-                // First wins: the consumer's own manifests are applied last, and implementation
-                // assemblies are scanned before the reference assemblies that mirror them.
                 if (manifests.TryAdd(manifest.Key, manifest.Value))
                     manifestOwners[manifest.Key] = scan.AssemblyName;
-            }
 
             foreach (var pair in scan.TypeUsages)
                 AddUsages(typeUsages, pair.Key, pair.Value);
@@ -221,8 +217,6 @@ public sealed class KhamsinEmitCss : Task
             if (!visited.Add(typeName))
                 continue;
 
-            // Usage edges are recorded per declaring type, including the real generic definition
-            // when an older manifest sits on a non-generic stub.
             if (typeUsages.TryGetValue(typeName, out var usages))
                 foreach (var use in usages)
                     queue.Enqueue(use);
@@ -271,11 +265,16 @@ public sealed class KhamsinEmitCss : Task
 
                 foreach (var literal in scan.AuthorLiterals)
                     if (engine.TryParse(literal.Value, out _, out _)) AddClasses(classes, literal.Value);
+
+                foreach (var literal in CSharpSourceScanner.FindClassCompositionLiterals(text, token => engine.TryParse(token, out _, out _)))
+                    AddClasses(classes, literal.Value);
             }
             else if (string.Equals(extension, ".cs", StringComparison.OrdinalIgnoreCase))
             {
                 foreach (var literal in CSharpSourceScanner.FindKxLiterals(text)) AddClasses(classes, literal.Value);
                 foreach (var literal in CSharpSourceScanner.FindKhamsinClassLiterals(text)) AddClasses(classes, literal.Value);
+                foreach (var literal in CSharpSourceScanner.FindClassCompositionLiterals(text, token => engine.TryParse(token, out _, out _)))
+                    AddClasses(classes, literal.Value);
             }
         }
 

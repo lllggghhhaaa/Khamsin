@@ -6,6 +6,9 @@ public sealed record RazorComponentTag(string Name, int Offset);
 
 public sealed record RazorNonLiteralUsage(int Offset, int Length);
 
+/// <summary>An attribute value bound to a C# member or local, for example <c>class="@RowClass"</c>.</summary>
+public sealed record RazorClassReference(string Name, int Offset);
+
 /// <summary>A <c>@typeparam</c> directive and its optional <c>where</c> constraint clause.</summary>
 public sealed record RazorTypeParameter(string Name, string Constraints);
 
@@ -19,7 +22,8 @@ public sealed class RazorScanResult
         IReadOnlyList<RazorClassLiteral> authorLiterals,
         IReadOnlyList<RazorComponentTag> usedComponents,
         IReadOnlyList<RazorNonLiteralUsage> nonLiteralUsages,
-        IReadOnlyList<RazorTypeParameter> typeParameters)
+        IReadOnlyList<RazorTypeParameter> typeParameters,
+        IReadOnlyList<RazorClassReference> references)
     {
         NamespaceOverride = namespaceOverride;
         Imports = imports;
@@ -28,6 +32,7 @@ public sealed class RazorScanResult
         UsedComponents = usedComponents;
         NonLiteralUsages = nonLiteralUsages;
         TypeParameters = typeParameters;
+        References = references;
     }
 
     public string? NamespaceOverride { get; }
@@ -49,6 +54,13 @@ public sealed class RazorScanResult
 
     /// <summary><c>@typeparam</c> directives in source order; empty for non-generic components.</summary>
     public IReadOnlyList<RazorTypeParameter> TypeParameters { get; }
+
+    /// <summary>
+    /// Class attributes bound to a member or local that no declaration in this file could resolve.
+    /// Their classes are still extracted by the C# scanner, but the generator can point at the markup
+    /// when it could not follow the value.
+    /// </summary>
+    public IReadOnlyList<RazorClassReference> References { get; }
 }
 
 /// <summary>
@@ -69,6 +81,7 @@ public static class RazorSourceScanner
         var authorLiterals = new List<RazorClassLiteral>();
         var nonLiteral = new List<RazorNonLiteralUsage>();
         var components = new List<RazorComponentTag>();
+        var references = new List<RazorClassReference>();
         var imports = new List<string>();
         var typeParameters = new List<RazorTypeParameter>();
         string? namespaceOverride = null;
@@ -76,7 +89,7 @@ public static class RazorSourceScanner
         ScanDirectives(blanked, imports, ref namespaceOverride);
         ScanTypeParameters(blanked, typeParameters);
         ScanKhamsinAttributes(blanked, literals, nonLiteral);
-        ScanClassAttributes(text, authorLiterals);
+        ScanClassAttributes(text, authorLiterals, references);
         ScanComponentTags(blanked, components);
 
         var group = 1_000_000;
@@ -92,8 +105,9 @@ public static class RazorSourceScanner
             AddClassTokens(literals, literal.Value, literal.Offset, 3_000_000 + group % 100_000);
         }
 
+        var unresolved = ClassCompositionScanner.ResolveReferences(text, references, authorLiterals);
         return new RazorScanResult(
-            namespaceOverride, imports, literals, authorLiterals, components, nonLiteral, typeParameters);
+            namespaceOverride, imports, literals, authorLiterals, components, nonLiteral, typeParameters, unresolved);
     }
 
     /// <summary>
@@ -437,7 +451,7 @@ public static class RazorSourceScanner
         return false;
     }
 
-    private static void ScanClassAttributes(string text, List<RazorClassLiteral> literals)
+    private static void ScanClassAttributes(string text, List<RazorClassLiteral> literals, List<RazorClassReference> references)
     {
         var index = 0;
         var group = 2_000_000;
@@ -446,16 +460,14 @@ public static class RazorSourceScanner
             if (TrySkipNonMarkup(text, ref index))
                 continue;
 
-            // Case-insensitive so component parameters spelled `Class="..."` (the Blazor convention
-            // for consumer overrides) are extracted exactly like plain `class="..."` attributes.
-            if (!MatchesWordIgnoreCase(text, index, "class"))
+            if (!ClassCompositionScanner.TryReadAttributeName(text, index, out var attributeNameLength))
             {
                 index++;
                 continue;
             }
 
             var at = index;
-            index = at + 5;
+            index = at + attributeNameLength;
             if (at > 0 && IsIdentifierChar(text[at - 1]))
                 continue;
 
@@ -469,8 +481,7 @@ public static class RazorSourceScanner
 
             var quote = text[cursor];
             var start = cursor + 1;
-            var end = start;
-            while (end < text.Length && text[end] != quote) end++;
+            var end = FindAttributeValueEnd(text, start, quote);
 
             if (end >= text.Length)
                 return;
@@ -478,16 +489,8 @@ public static class RazorSourceScanner
             var value = text.Substring(start, end - start);
             index = end + 1;
 
-            var expression = value.IndexOf('@');
-            if (expression == 0)
-                continue;
-
-            var literalPart = expression < 0 ? value : value.Substring(0, expression);
-            if (literalPart.Length == 0)
-                continue;
-
             group++;
-            AddClassTokens(literals, literalPart, start, group);
+            ClassCompositionScanner.CollectClassValue(value, start, literals, references, group);
         }
     }
 
